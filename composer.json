@@ -12,7 +12,7 @@
         {
             "name": "Daniel Jurkovic",
             "email": "daniel@jurkovic.io",
-            "homepage": "jurkovic.io",
+            "homepage": "http://jurkovic.io",
             "role": "Developer"
         }
     ],
@@ -40,7 +40,7 @@
     },
     "extra": {
         "branch-alias": {
-            "dev-master": "1.0-dev"
+            "dev-master": "0.0.1"
         }
     },
     "config": {
