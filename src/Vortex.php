@@ -4,7 +4,7 @@ namespace Macroparts\Vortex;
 
 abstract class Vortex
 {
-    use UnserAllerLib_Api_V4_AdapterProvider;
+    use \UnserAllerLib_Api_V4_AdapterProvider;
 
     const DIRECTIVE_FIELDS = 'fields';
 
@@ -145,7 +145,7 @@ abstract class Vortex
      */
     private function getPlatformOptions()
     {
-        return Zend_Registry::get('platformOptions');
+        return \Zend_Registry::get('platformOptions');
     }
 
     /**
@@ -167,29 +167,30 @@ abstract class Vortex
     /**
      * @param \Doctrine\ORM\QueryBuilder $query
      * @param string $alias
-     * @param UnserAller_Model_User $currentUser
+     * @param \UnserAller_Model_User $currentUser
      * @param array $additionalParams
      * @param $language
      * @param $filtername
      * @return \Doctrine\ORM\Query\Expr\Orx
-     * @throws UnserAllerLib_Api_V4_Exception_MissingFilterDirective
-     * @throws UnserAllerLib_Api_V4_Exception_SafeForPrinting
+     * @throws \UnserAllerLib_Api_V4_Exception_MissingFilterDirective
+     * @throws \UnserAllerLib_Api_V4_Exception_SafeForPrinting
      */
     private function filterAny($query, $alias, $currentUser, $additionalParams, $language, $filtername)
     {
-        return $this->abstractFilterMultipleFields($query, 'orX', $currentUser, $additionalParams, $language, $filtername);
+        return $this->abstractFilterMultipleFields($query, 'orX', $currentUser, $additionalParams, $language,
+            $filtername);
     }
 
     /**
      * @param \Doctrine\ORM\QueryBuilder $query
      * @param string $alias
-     * @param UnserAller_Model_User $currentUser
+     * @param \UnserAller_Model_User $currentUser
      * @param array $additionalParams
      * @param $language
      * @param $filtername
      * @return \Doctrine\ORM\Query\Expr\Orx
-     * @throws UnserAllerLib_Api_V4_Exception_MissingFilterDirective
-     * @throws UnserAllerLib_Api_V4_Exception_SafeForPrinting
+     * @throws \UnserAllerLib_Api_V4_Exception_MissingFilterDirective
+     * @throws \UnserAllerLib_Api_V4_Exception_SafeForPrinting
      */
     private function filterAll($query, $alias, $currentUser, $additionalParams, $language, $filtername)
     {
@@ -200,13 +201,13 @@ abstract class Vortex
     /**
      * @param \Doctrine\ORM\QueryBuilder $query
      * @param string $expressionType
-     * @param UnserAller_Model_User $currentUser
+     * @param \UnserAller_Model_User $currentUser
      * @param array $additionalParams
      * @param $language
      * @param $filtername
      * @return \Doctrine\ORM\Query\Expr\Orx
-     * @throws UnserAllerLib_Api_V4_Exception_MissingFilterDirective
-     * @throws UnserAllerLib_Api_V4_Exception_SafeForPrinting
+     * @throws \UnserAllerLib_Api_V4_Exception_MissingFilterDirective
+     * @throws \UnserAllerLib_Api_V4_Exception_SafeForPrinting
      */
     private function abstractFilterMultipleFields(
         $query,
@@ -217,7 +218,7 @@ abstract class Vortex
         $filtername
     ) {
         if (!isset($additionalParams[self::DIRECTIVE_FIELDS])) {
-            throw new UnserAllerLib_Api_V4_Exception_MissingFilterDirective(
+            throw new \UnserAllerLib_Api_V4_Exception_MissingFilterDirective(
                 $filtername, self::DIRECTIVE_FIELDS, ['fieldname1', 'fieldname2'],
                 ':someFilterDirective(params):maySomeMoreDirectives...'
             );
@@ -225,7 +226,7 @@ abstract class Vortex
 
         $fields = $additionalParams[self::DIRECTIVE_FIELDS];
         if (count(array_intersect_key($this->finalFilterWhitelist, array_flip($fields))) !== count($fields)) {
-            throw new UnserAllerLib_Api_V4_Exception_SafeForPrinting('Wrong use of "' . $filtername . '" filter. One of your specified fields is not filterable. Try using fields that are filterable.');
+            throw new \UnserAllerLib_Api_V4_Exception_SafeForPrinting('Wrong use of "' . $filtername . '" filter. One of your specified fields is not filterable. Try using fields that are filterable.');
         }
 
         unset($additionalParams[self::DIRECTIVE_FIELDS]);
@@ -246,7 +247,7 @@ abstract class Vortex
      * Executes include methods driven by a include string. See API docs to know how this string looks like
      *
      * @param \Doctrine\ORM\QueryBuilder $query
-     * @param UnserAller_Model_User $currentUser
+     * @param \UnserAller_Model_User $currentUser
      * @param $language
      * @param string $includeString
      * @param array $meta
@@ -280,6 +281,7 @@ abstract class Vortex
      * So when we overwrite whitelists locally they are still including all the elements from core adapters.
      *
      * @param null|string $class
+     * @param $propertyname
      * @return array
      */
     private function getStaticPropertyOfClassMergedWithParents($class, $propertyname)
@@ -298,8 +300,9 @@ abstract class Vortex
 
     private function updateMetaOnInclude(&$meta, $includeName)
     {
-        $include = static::$includeWhitelist[$includeName];
+        $include = $this->finalIncludeWhitelist[$includeName];
         if (isset($include['model'])) {
+            echo $includeName;
             $meta['modelnameIndex']["{$include['model']}"][] = $includeName;
         }
     }
@@ -308,11 +311,14 @@ abstract class Vortex
      * Calls methods that add where conditions to a query driven by a string (see api docs for string format)
      *
      * @param \Doctrine\ORM\QueryBuilder $query
-     * @param UnserAller_Model_User $currentUser
+     * @param \UnserAller_Model_User $currentUser
      * @param string $filterString
+     * @param $language
      * @param string $joinFiltersWith
      * @return \Doctrine\ORM\QueryBuilder
-     * @throws UnserAllerLib_Api_V4_Exception_InvalidFilter
+     * @throws \UnserAllerLib_Api_V4_Exception_InvalidFilter
+     * @uses filterAny
+     * @uses filterAll
      */
     protected function addFilterStatements($query, $currentUser, $filterString, $language, $joinFiltersWith = 'AND')
     {
@@ -324,7 +330,7 @@ abstract class Vortex
         $expression = mb_strtoupper($joinFiltersWith) === 'OR' ? $query->expr()->orX() : $query->expr()->andX();
         foreach ($requestedFilters as $requestedFilter => $additionalParams) {
             if ($this->isNotFilterableProperty($requestedFilter)) {
-                throw new UnserAllerLib_Api_V4_Exception_InvalidFilter($requestedFilter);
+                throw new \UnserAllerLib_Api_V4_Exception_InvalidFilter($requestedFilter);
             }
 
             $filterMethod = $this->decodeMethodFromRequestedFilter($requestedFilter);
@@ -347,22 +353,22 @@ abstract class Vortex
      */
     protected function parseAdditionalIncludeParams($additionalParams)
     {
-        $filter = UnserAllerLib_Tool_Array::spliceElemOrNull($additionalParams, 'filter');
+        $filter = \UnserAllerLib_Tool_Array::spliceElemOrNull($additionalParams, 'filter');
         $filter = is_array($filter) ? implode(',', $filter) : '';
 
-        $include = UnserAllerLib_Tool_Array::spliceElemOrNull($additionalParams, 'include');
+        $include = \UnserAllerLib_Tool_Array::spliceElemOrNull($additionalParams, 'include');
         $include = is_array($include) ? implode(',', $include) : '';
 
-        $order = UnserAllerLib_Tool_Array::spliceElemOrNull($additionalParams, 'order');
+        $order = \UnserAllerLib_Tool_Array::spliceElemOrNull($additionalParams, 'order');
         $order = is_array($order) ? implode(',', $order) : '';
 
-        $limit = UnserAllerLib_Tool_Array::spliceElemOrNull($additionalParams, 'limit');
+        $limit = \UnserAllerLib_Tool_Array::spliceElemOrNull($additionalParams, 'limit');
         $limit = is_array($limit) ? (int)array_shift($limit) : 0;
 
-        $page = UnserAllerLib_Tool_Array::spliceElemOrNull($additionalParams, 'page');
+        $page = \UnserAllerLib_Tool_Array::spliceElemOrNull($additionalParams, 'page');
         $page = is_array($page) ? (int)array_shift($page) : 1;
 
-        $filterMode = UnserAllerLib_Tool_Array::spliceElemOrNull($additionalParams, 'filterMode');
+        $filterMode = \UnserAllerLib_Tool_Array::spliceElemOrNull($additionalParams, 'filterMode');
         $filterMode = is_array($filterMode) ? array_shift($filterMode) : 'AND';
 
         return [$filter, $include, $order, $limit, $page, $filterMode];
@@ -372,9 +378,10 @@ abstract class Vortex
      * Calls methods that add orderBy statements to a query driven by a string (see api docs for the string format)
      *
      * @param \Doctrine\ORM\QueryBuilder $query
-     * @param UnserAller_Model_User $currentUser
+     * @param \UnserAller_Model_User $currentUser
      * @param string $orderString
      * @return \Doctrine\ORM\QueryBuilder
+     * @throws \UnserAllerLib_Api_V4_Exception_InvalidOrder
      */
     private function addOrderStatements($query, $currentUser, $orderString)
     {
@@ -386,7 +393,7 @@ abstract class Vortex
 
         foreach ($requestedOrders as $field => $order) {
             if ($this->isNotOrderableProperty($field)) {
-                throw new UnserAllerLib_Api_V4_Exception_InvalidOrder($field);
+                throw new \UnserAllerLib_Api_V4_Exception_InvalidOrder($field);
             }
 
             $orderMethod = $this->decodeMethodFromRequestedOrder($field);
@@ -504,7 +511,7 @@ abstract class Vortex
     /**
      * Doctrine will throw errors if a table has a multi column primary index
      * http://stackoverflow.com/questions/18968963/select-countdistinct-error-on-multiple-columns
-     * @return array
+     * @return string
      */
     protected function getPrimaryIndexCol()
     {
@@ -829,9 +836,9 @@ abstract class Vortex
     /**
      * @param \Doctrine\ORM\QueryBuilder $query
      * @param string $alias
-     * @param UnserAller_Model_User $currentUser
+     * @param \UnserAller_Model_User $currentUser
      * @param array $additionalParams
-     * @return array
+     * @return \Doctrine\ORM\Query\Expr\Andx
      */
     protected function filterId($query, $alias, $currentUser, $additionalParams)
     {
@@ -860,7 +867,7 @@ abstract class Vortex
      * Creates fixed, paginated results from an $incompleteStatement and a requiredIncludes string. An incomplete
      * statement is a query builder instance with only froms, joins and where conditions (groupbys, havings not tested).
      *
-     * @param UnserAller_Model_User $currentUser
+     * @param \UnserAller_Model_User $currentUser
      * @param $language
      * @param \Doctrine\ORM\QueryBuilder $incompleteStatement
      * @param string $filterString
@@ -899,7 +906,7 @@ abstract class Vortex
     }
 
     /**
-     * @param UnserAller_Model_User $currentUser
+     * @param \UnserAller_Model_User $currentUser
      * @return \Doctrine\ORM\QueryBuilder
      */
     protected abstract function initIncompleteStatement($currentUser);
@@ -916,7 +923,7 @@ abstract class Vortex
     }
 
     /**
-     * @param UnserAller_Model_User $currentUser
+     * @param \UnserAller_Model_User $currentUser
      * @param string $filterString
      * @param $language
      * @param string $joinFiltersWith
@@ -930,7 +937,7 @@ abstract class Vortex
     }
 
     /**
-     * @param UnserAller_Model_User $currentUser
+     * @param \UnserAller_Model_User $currentUser
      * @param $language
      * @param string $filterString
      * @param string $includeString
@@ -1013,14 +1020,14 @@ abstract class Vortex
     }
 
     /**
-     * @param UnserAller_Model_User $currentUser
+     * @param \UnserAller_Model_User $currentUser
      * @param string $language
      * @param string $filterString
      * @param string $includeString
      * @param string $orderString
      * @param int $limit
      * @param string $filterMode
-     * @return Generator
+     * @return \Generator
      */
     public function batchFindMultiple(
         $currentUser,
@@ -1051,7 +1058,7 @@ abstract class Vortex
     }
 
     /**
-     * @param UnserAller_Model_User $currentUser
+     * @param \UnserAller_Model_User $currentUser
      * @param string $language
      * @param string $filterString
      * @param string $includeString
@@ -1098,8 +1105,9 @@ abstract class Vortex
         $c = new \ReflectionClass('Doctrine\ORM\Query');
         $parser = $c->getProperty('_parserResult');
         $parser->setAccessible(true);
-        /** @var \Doctrine\ORM\Query\ParserResult $parser */
+        /** @var \ReflectionProperty $parser */
         $parser = $parser->getValue($query);
+        /** @var \Doctrine\ORM\Query\ParserResult $parser */
         $resultSet = $parser->getResultSetMapping();
 
         // Change the aliases back to what was originally specified in the QueryBuilder.
@@ -1119,7 +1127,7 @@ abstract class Vortex
     }
 
     /**
-     * @param UnserAller_Model_User $currentUser
+     * @param \UnserAller_Model_User $currentUser
      * @param string $language
      * @param string $filterString
      * @param string $includeString
@@ -1150,7 +1158,7 @@ abstract class Vortex
     }
 
     /**
-     * @param UnserAller_Model_User $currentUser
+     * @param \UnserAller_Model_User $currentUser
      * @param int $id
      * @param string $language
      * @param string $include
@@ -1174,14 +1182,17 @@ abstract class Vortex
             $include)), true);
     }
 
+    /**
+     * @return null|\UnserAller_Model_User|object
+     */
     private function getCurrentlyAuthenticatedUser()
     {
-        return $this->getEntityManager()->find(UnserAller_Model_User::class,
-            (int)Zend_Auth::getInstance()->getIdentity());
+        return $this->getEntityManager()->find(\UnserAller_Model_User::class,
+            (int)\Zend_Auth::getInstance()->getIdentity());
     }
 
     /**
-     * @param UnserAller_Model_User $currentUser
+     * @param \UnserAller_Model_User $currentUser
      * @param string $language
      * @param string $filterString
      * @param string $includeString
@@ -1216,7 +1227,7 @@ abstract class Vortex
      * Adds the default select statement, all includes and order statements to the incomplete statement
      * and returns the qurey builder instance
      *
-     * @param UnserAller_Model_User $currentUser
+     * @param \UnserAller_Model_User $currentUser
      * @param $language
      * @param \Doctrine\ORM\QueryBuilder $incompleteStatement
      * @param string $includeString
@@ -1327,7 +1338,7 @@ abstract class Vortex
      * Executes all operations that were scheduled for post processing
      *
      * @param array $result
-     * @param UnserAller_Model_User $currentUser
+     * @param \UnserAller_Model_User $currentUser
      * @param $language
      * @param array $meta
      * @return array
@@ -1388,7 +1399,7 @@ abstract class Vortex
     private function retrieveNestedSingleResult($value, $nestingOptions, $language = '')
     {
         list($model, $filterFunction, $currentUser, $additionalParams) = $nestingOptions;
-        list($filterString, $includeString, $orderString, $limit, $page, $filterMode) = $this->parseAdditionalIncludeParams($additionalParams);
+        list($filterString, $includeString, $orderString, , ,) = $this->parseAdditionalIncludeParams($additionalParams);
 
         if ($filterString) {
             $filterString = $filterString . ',';
@@ -1419,6 +1430,16 @@ abstract class Vortex
         }
     }
 
+    /**
+     * @param $item
+     * @param $scheduledFixes
+     * @param $currentUser
+     * @param $meta
+     * @param $collectionNestingMethod
+     * @param $language
+     * @uses retrieveNestedCollection
+     * @uses retrieveNestedCollectionAndMergeMeta
+     */
     private function applyFixesToItem(
         &$item,
         $scheduledFixes,
@@ -1439,16 +1460,16 @@ abstract class Vortex
             }
 
             if (isset($fix['cast'])) {
-                UnserAllerLib_Tool_Array::castNestedValue($item, $path, $fix['cast']);
+                \UnserAllerLib_Tool_Array::castNestedValue($item, $path, $fix['cast']);
             }
 
-            $value = UnserAllerLib_Tool_Array::readNestedValue($item, $path);
+            $value = \UnserAllerLib_Tool_Array::readNestedValue($item, $path);
 
             if (isset($fix['additionalFilterValues'])) {
                 $value = [$value];
 
                 foreach ($fix['additionalFilterValues'] AS $additionalFilterValue) {
-                    $value[] = UnserAllerLib_Tool_Array::readNestedValue($item, $additionalFilterValue);
+                    $value[] = \UnserAllerLib_Tool_Array::readNestedValue($item, $additionalFilterValue);
                 }
             }
 
@@ -1475,7 +1496,7 @@ abstract class Vortex
             }
 
             if (isset($fix['move'])) {
-                UnserAllerLib_Tool_Array::integrateNestedValue($item, $fix['move'], $value);
+                \UnserAllerLib_Tool_Array::integrateNestedValue($item, $fix['move'], $value);
                 if ($path != $fix['move']) {
                     $scheduledDeletions[$path] = ['delete' => 1];
                 }
@@ -1483,42 +1504,53 @@ abstract class Vortex
         }
 
         foreach ($scheduledDeletions as $path => $fix) {
-            UnserAllerLib_Tool_Array::unsetNestedValue($item, $path);
+            \UnserAllerLib_Tool_Array::unsetNestedValue($item, $path);
         }
     }
 
     /**
      * Applies filter methods for $filterName to $value
      * @uses filterJsonAfterwards
+     * @uses filterJsonIfNullSetEmptyObjectAfterwards
      * @uses filterJsonOrNullAfterwards
      * @uses filterDatetimeAfterwards
      * @uses filterDatetimeOrNullAfterwards
+     * @uses filterIntOrNullAfterwards
+     * @uses filterNl2BrAfterwards
      * @param string $filterName
      * @param mixed $value
+     * @param $currentUser
      * @return mixed
      */
     private function filterValue($filterName, $value, $currentUser)
     {
         if (!is_callable([$this, $filterName])) {
-            throw new InvalidArgumentException('Post Processing Filter method not found: ' . $filterName);
+            throw new \InvalidArgumentException('Post Processing Filter method not found: ' . $filterName);
         }
 
         return call_user_func_array([$this, $filterName], [$value, $currentUser]);
     }
 
     /**
+     * @param $field
      * @param \Doctrine\ORM\QueryBuilder $query
      * @param string $alias
-     * @param UnserAller_Model_User $currentUser
+     * @param \UnserAller_Model_User $currentUser
      * @param array $methods
      * @return \Doctrine\ORM\Query\Expr\Andx
+     * @uses stringContainExpression
+     * @uses stringContainsExpression
+     * @uses stringIsExpression
+     * @uses stringNotExpression
+     * @uses stringFalseExpression
+     * @uses stringTrueExpression
      */
     protected function createConditionsForStringColumn($field, $query, $alias, $currentUser, $methods)
     {
-        if (UnserAllerLib_Tool_Array::hasMoreKeysThan($methods,
+        if (\UnserAllerLib_Tool_Array::hasMoreKeysThan($methods,
             ['contain', 'contains', 'is', 'not', 'false', 'true'])
         ) {
-            throw new InvalidArgumentException('Invalid expression methods used');
+            throw new \InvalidArgumentException('Invalid expression methods used');
         }
 
         return $this->createExpression('string', $field, $query, $alias, $currentUser, $methods);
@@ -1530,10 +1562,10 @@ abstract class Vortex
      * @param $translationName
      * @param $language
      * @param string $alias
-     * @param UnserAller_Model_User $currentUser
+     * @param \UnserAller_Model_User $currentUser
      * @param $additionalParams
      * @return \Doctrine\ORM\Query\Expr\Composite
-     * @throws UnserAllerLib_Api_V4_Exception_InvalidFilter
+     * @throws \UnserAllerLib_Api_V4_Exception_InvalidFilter
      */
     protected function createConditionsForMultilanguageStringColumn(
         $query,
@@ -1546,7 +1578,7 @@ abstract class Vortex
     ) {
         if (isset($additionalParams['overAllTranslations'])) {
             if (!$this->supportedLanguages) {
-                throw new UnserAllerLib_Api_V4_Exception_InvalidFilter('Supported languages are not set');
+                throw new \UnserAllerLib_Api_V4_Exception_InvalidFilter('Supported languages are not set');
             }
 
             unset($additionalParams['overAllTranslations']);
@@ -1578,32 +1610,50 @@ abstract class Vortex
 
 
     /**
+     * @param $field
      * @param \Doctrine\ORM\QueryBuilder $query
      * @param string $alias
-     * @param UnserAller_Model_User $currentUser
+     * @param \UnserAller_Model_User $currentUser
      * @param array $methods
      * @return \Doctrine\ORM\Query\Expr\Andx
+     * @uses dateGtExpression
+     * @uses dateGteExpression
+     * @uses dateLtExpression
+     * @uses dateLteExpression
+     * @uses dateFalseExpression
+     * @uses dateTrueExpression
+     * @uses dateIsExpression
+     * @uses dateNotExpression
      */
     protected function createConditionsForDatetimeColumn($field, $query, $alias, $currentUser, $methods)
     {
-        if (UnserAllerLib_Tool_Array::hasMoreKeysThan($methods, ['gt', 'gte', 'lt', 'lte', 'false', 'true'])) {
-            throw new InvalidArgumentException('Invalid expression methods used');
+        if (\UnserAllerLib_Tool_Array::hasMoreKeysThan($methods,
+            ['is', 'not', 'gt', 'gte', 'lt', 'lte', 'false', 'true'])
+        ) {
+            throw new \InvalidArgumentException('Invalid expression methods used');
         }
 
         return $this->createExpression('date', $field, $query, $alias, $currentUser, $methods);
     }
 
     /**
+     * @param $field
      * @param \Doctrine\ORM\QueryBuilder $query
      * @param string $alias
-     * @param UnserAller_Model_User $currentUser
+     * @param \UnserAller_Model_User $currentUser
      * @param array $methods
      * @return \Doctrine\ORM\Query\Expr\Andx
+     * @uses integerFalseExpression
+     * @uses integerTrueExpression
+     * @uses integerIsExpression
+     * @uses integerNotExpression
+     * @uses integerMeExpression
+     * @uses integerNotmeExpression
      */
     protected function createConditionsForEntityColumn($field, $query, $alias, $currentUser, $methods)
     {
-        if (UnserAllerLib_Tool_Array::hasMoreKeysThan($methods, ['false', 'true', 'is', 'not', 'me', 'notme'])) {
-            throw new InvalidArgumentException('Invalid expression methods used');
+        if (\UnserAllerLib_Tool_Array::hasMoreKeysThan($methods, ['false', 'true', 'is', 'not', 'me', 'notme'])) {
+            throw new \InvalidArgumentException('Invalid expression methods used');
         }
 
         return $this->createExpression('integer', $field, $query, $alias, $currentUser, $methods);
@@ -1616,34 +1666,45 @@ abstract class Vortex
      * Todo: Needs research, for time being only true comparison is working as expected
      *
      *
+     * @param $subquery
      * @param \Doctrine\ORM\QueryBuilder $query
      * @param string $alias
-     * @param UnserAller_Model_User $currentUser
+     * @param \UnserAller_Model_User $currentUser
      * @param array $methods
      * @return \Doctrine\ORM\Query\Expr\Andx
+     * @uses subqueryFalseExpression
+     * @uses subqueryTrueExpression
+     * @uses subqueryGtExpression
+     * @uses subqueryGteExpression
+     * @uses subqueryLtExpression
+     * @uses subqueryLteExpression
+     * @uses subqueryEqExpression
+     * @uses subqueryAnyExpression
+     * @uses subqueryNullExpression
      */
     protected function createConditionsForIntegerSubquery($subquery, $query, $alias, $currentUser, $methods)
     {
-        if (UnserAllerLib_Tool_Array::hasMoreKeysThan($methods,
+        if (\UnserAllerLib_Tool_Array::hasMoreKeysThan($methods,
             ['false', 'true', 'gt', 'gte', 'lt', 'lte', 'eq', 'any', 'null'])
         ) {
-            throw new InvalidArgumentException('Invalid expression methods used');
+            throw new \InvalidArgumentException('Invalid expression methods used');
         }
 
         return $this->createExpression('subquery', $subquery, $query, $alias, $currentUser, $methods);
     }
 
     /**
+     * @param $subquery
      * @param \Doctrine\ORM\QueryBuilder $query
      * @param string $alias
-     * @param UnserAller_Model_User $currentUser
+     * @param \UnserAller_Model_User $currentUser
      * @param array $methods
      * @return \Doctrine\ORM\Query\Expr\Andx
      */
     protected function createConditionsForIntegerCollectionSubquery($subquery, $query, $alias, $currentUser, $methods)
     {
-        if (UnserAllerLib_Tool_Array::hasMoreKeysThan($methods, ['anyis'])) {
-            throw new InvalidArgumentException('Invalid expression methods used');
+        if (\UnserAllerLib_Tool_Array::hasMoreKeysThan($methods, ['anyis'])) {
+            throw new \InvalidArgumentException('Invalid expression methods used');
         }
 
         return $this->createExpression('subquery', $subquery, $query, $alias, $currentUser, $methods);
@@ -1656,16 +1717,18 @@ abstract class Vortex
      * Todo: Needs research, for time being only true comparison is working as expected
      *
      *
+     * @param $subquery
      * @param \Doctrine\ORM\QueryBuilder $query
      * @param string $alias
-     * @param UnserAller_Model_User $currentUser
+     * @param \UnserAller_Model_User $currentUser
      * @param array $methods
      * @return \Doctrine\ORM\Query\Expr\Andx
+     * @uses subqueryAnyisExpression
      */
     protected function createConditionsForStringCollectionSubquery($subquery, $query, $alias, $currentUser, $methods)
     {
-        if (UnserAllerLib_Tool_Array::hasMoreKeysThan($methods, ['anyis'])) {
-            throw new InvalidArgumentException('Invalid expression methods used');
+        if (\UnserAllerLib_Tool_Array::hasMoreKeysThan($methods, ['anyis'])) {
+            throw new \InvalidArgumentException('Invalid expression methods used');
         }
 
         return $this->createExpression('subquery', $subquery, $query, $alias, $currentUser, $methods);
@@ -1678,16 +1741,19 @@ abstract class Vortex
      * Todo: Needs research, for time being only true comparison is working as expected
      *
      *
+     * @param $subquery
      * @param \Doctrine\ORM\QueryBuilder $query
      * @param string $alias
-     * @param UnserAller_Model_User $currentUser
+     * @param \UnserAller_Model_User $currentUser
      * @param array $methods
      * @return \Doctrine\ORM\Query\Expr\Andx
+     * @uses subqueryTrueExpression
+     * @uses subqueryFalseExpression
      */
     protected function createConditionsForDatetimeSubquery($subquery, $query, $alias, $currentUser, $methods)
     {
-        if (UnserAllerLib_Tool_Array::hasMoreKeysThan($methods, ['false', 'true'])) {
-            throw new InvalidArgumentException('Invalid expression methods used');
+        if (\UnserAllerLib_Tool_Array::hasMoreKeysThan($methods, ['false', 'true'])) {
+            throw new \InvalidArgumentException('Invalid expression methods used');
         }
 
         return $this->createExpression('subquery', $subquery, $query, $alias, $currentUser, $methods);
@@ -1696,18 +1762,27 @@ abstract class Vortex
     /**
      * Translates params into where conditions. Null values are handled as you would expect it.
      *
+     * @param $col
      * @param \Doctrine\ORM\QueryBuilder $query
      * @param string $alias
-     * @param UnserAller_Model_User $currentUser
+     * @param \UnserAller_Model_User $currentUser
      * @param array $methods
      * @return \Doctrine\ORM\Query\Expr\Andx
+     * @uses integerIsExpression
+     * @uses integerNotExpression
+     * @uses integerGtExpression
+     * @uses integerGteExpression
+     * @uses integerLtExpression
+     * @uses integerLteExpression
+     * @uses integerFalseExpression
+     * @uses integerTrueExpression
      */
     protected function createConditionsForIntegerColumn($col, $query, $alias, $currentUser, $methods)
     {
-        if (UnserAllerLib_Tool_Array::hasMoreKeysThan($methods,
+        if (\UnserAllerLib_Tool_Array::hasMoreKeysThan($methods,
             ['is', 'not', 'gt', 'gte', 'lt', 'lte', 'false', 'true'])
         ) {
-            throw new InvalidArgumentException('Invalid expression methods used');
+            throw new \InvalidArgumentException('Invalid expression methods used');
         }
 
         return $this->createExpression('integer', $col, $query, $alias, $currentUser, $methods);
@@ -1721,18 +1796,28 @@ abstract class Vortex
      *
      * Translates params into where conditions. Null values are handled as you would expect it.
      *
+     * @param $col
      * @param \Doctrine\ORM\QueryBuilder $query
      * @param string $alias
-     * @param UnserAller_Model_User $currentUser
+     * @param \UnserAller_Model_User $currentUser
      * @param array $methods
      * @return \Doctrine\ORM\Query\Expr\Andx
+     * @uses integerIsExpression
+     * @uses integerNotExpression
+     * @uses integerGtExpression
+     * @uses integerGteExpression
+     * @uses integerLtExpression
+     * @uses integerLteExpression
+     * @uses integerFalseExpression
+     * @uses integerTrueExpression
+     * @uses integerAnyExpression
      */
     protected function createConditionsForIntegerColumnInternal($col, $query, $alias, $currentUser, $methods)
     {
-        if (UnserAllerLib_Tool_Array::hasMoreKeysThan($methods,
+        if (\UnserAllerLib_Tool_Array::hasMoreKeysThan($methods,
             ['is', 'not', 'gt', 'gte', 'lt', 'lte', 'false', 'true', 'any'])
         ) {
-            throw new InvalidArgumentException('Invalid expression methods used');
+            throw new \InvalidArgumentException('Invalid expression methods used');
         }
 
         return $this->createExpression('integer', $col, $query, $alias, $currentUser, $methods);
@@ -1764,10 +1849,11 @@ abstract class Vortex
     }
 
     /**
+     * @param $prefix
      * @param string $field
      * @param \Doctrine\ORM\QueryBuilder $query
      * @param string $alias
-     * @param UnserAller_Model_User $currentUser
+     * @param \UnserAller_Model_User $currentUser
      * @param array $methods
      * @return \Doctrine\ORM\Query\Expr\Andx
      */
@@ -1784,7 +1870,7 @@ abstract class Vortex
 
     /**
      * @param \Doctrine\ORM\QueryBuilder $query
-     * @param string $field
+     * @param array $field
      * @param array $params
      * @param string $alias
      * @return mixed
@@ -1799,7 +1885,7 @@ abstract class Vortex
 
     /**
      * @param \Doctrine\ORM\QueryBuilder $query
-     * @param string $field
+     * @param array $field
      * @param array $params
      * @param string $alias
      * @return mixed
@@ -1811,7 +1897,7 @@ abstract class Vortex
 
     /**
      * @param \Doctrine\ORM\QueryBuilder $query
-     * @param string $subquery
+     * @param array $subquery
      * @param array $params
      * @param string $alias
      * @return mixed
@@ -1826,7 +1912,7 @@ abstract class Vortex
 
     /**
      * @param \Doctrine\ORM\QueryBuilder $query
-     * @param string $subquery
+     * @param array $subquery
      * @param array $params
      * @param string $alias
      * @return mixed
@@ -1846,7 +1932,7 @@ abstract class Vortex
 
     /**
      * @param \Doctrine\ORM\QueryBuilder $query
-     * @param string $subquery
+     * @param array $subquery
      * @param array $params
      * @param string $alias
      * @return mixed
@@ -1861,7 +1947,7 @@ abstract class Vortex
 
     /**
      * @param \Doctrine\ORM\QueryBuilder $query
-     * @param string $subquery
+     * @param array $subquery
      * @param array $params
      * @param string $alias
      * @return mixed
@@ -1876,7 +1962,7 @@ abstract class Vortex
 
     /**
      * @param \Doctrine\ORM\QueryBuilder $query
-     * @param string $subquery
+     * @param array $subquery
      * @param array $params
      * @param string $alias
      * @return mixed
@@ -1891,7 +1977,7 @@ abstract class Vortex
 
     /**
      * @param \Doctrine\ORM\QueryBuilder $query
-     * @param string $subquery
+     * @param array $subquery
      * @param array $params
      * @param string $alias
      * @return mixed
@@ -1906,7 +1992,7 @@ abstract class Vortex
 
     /**
      * @param \Doctrine\ORM\QueryBuilder $query
-     * @param string $subquery
+     * @param array $subquery
      * @param array $params
      * @param string $alias
      * @return mixed
@@ -1960,14 +2046,14 @@ abstract class Vortex
      * @param string $field
      * @param array $params
      * @param string $alias
-     * @param UnserAller_Model_User $currentUser
+     * @param \UnserAller_Model_User $currentUser
      * @return mixed
-     * @throws UnserAllerLib_Api_V4_Exception_UserRequiredButNotAuthenticated
+     * @throws \UnserAllerLib_Api_V4_Exception_UserRequiredButNotAuthenticated
      */
     private function integerMeExpression($query, $field, $params, $alias, $currentUser)
     {
         if (!$currentUser) {
-            throw new UnserAllerLib_Api_V4_Exception_UserRequiredButNotAuthenticated();
+            throw new \UnserAllerLib_Api_V4_Exception_UserRequiredButNotAuthenticated();
         }
         return $query->expr()->eq($field, $currentUser->getId());
     }
@@ -1978,7 +2064,7 @@ abstract class Vortex
      * @param array $params
      * @param string $alias
      * @return \Doctrine\ORM\Query\Expr\Comparison
-     * @throws UnserAllerLib_Api_V4_Exception_UserRequiredButNotAuthenticated
+     * @throws \UnserAllerLib_Api_V4_Exception_UserRequiredButNotAuthenticated
      */
     private function integerAnyExpression($query, $field, $params, $alias)
     {
@@ -1990,14 +2076,14 @@ abstract class Vortex
      * @param string $field
      * @param array $params
      * @param string $alias
-     * @param UnserAller_Model_User $currentUser
+     * @param \UnserAller_Model_User $currentUser
      * @return \Doctrine\ORM\Query\Expr\Comparison
-     * @throws UnserAllerLib_Api_V4_Exception_UserRequiredButNotAuthenticated
+     * @throws \UnserAllerLib_Api_V4_Exception_UserRequiredButNotAuthenticated
      */
     private function integerNotmeExpression($query, $field, $params, $alias, $currentUser)
     {
         if (!$currentUser) {
-            throw new UnserAllerLib_Api_V4_Exception_UserRequiredButNotAuthenticated();
+            throw new \UnserAllerLib_Api_V4_Exception_UserRequiredButNotAuthenticated();
         }
         return $query->expr()->neq($field, $currentUser->getId());
     }
@@ -2344,7 +2430,7 @@ abstract class Vortex
      */
     private function filterJsonIfNullSetEmptyObjectAfterwards($value)
     {
-        return $value === null ? new stdClass() : json_decode($value, true);
+        return $value === null ? new \stdClass() : json_decode($value, true);
     }
 
     /**
@@ -2373,22 +2459,22 @@ abstract class Vortex
      * Too complex to explain
      *
      * @param string $value
-     * @return DateTime
+     * @return \DateTime
      */
     private function filterDatetimeAfterwards($value)
     {
-        return new DateTime($value);
+        return new \DateTime($value);
     }
 
     /**
      * Too complex to explain
      *
      * @param string $value
-     * @return DateTime
+     * @return \DateTime
      */
     private function filterDatetimeOrNullAfterwards($value)
     {
-        return $value === null ? null : new DateTime($value);
+        return $value === null ? null : new \DateTime($value);
     }
 
     /**
@@ -2495,8 +2581,14 @@ abstract class Vortex
      * @param string $language
      * @return array|void
      */
-    protected function abstractIncludeMultilanguageStringColumn($query, $alias, $col, $name, $translationName, $language)
-    {
+    protected function abstractIncludeMultilanguageStringColumn(
+        $query,
+        $alias,
+        $col,
+        $name,
+        $translationName,
+        $language
+    ) {
         if (!$language) {
             $query->addSelect("($col) $alias");
         } else {
@@ -2513,11 +2605,11 @@ abstract class Vortex
     protected function getAdditionalUserParamOrFail(&$additionalParams)
     {
         if (!isset($additionalParams['user'][0])) {
-            throw new InvalidArgumentException('User identifier required but not given');
+            throw new \InvalidArgumentException('User identifier required but not given');
         }
 
         $param = $additionalParams['user'];
         unset($additionalParams['user']);
-        return UnserAllerLib_Validate_Helper::integerOrFail($param[0], 1);
+        return \UnserAllerLib_Validate_Helper::integerOrFail($param[0], 1);
     }
 }
