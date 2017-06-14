@@ -549,8 +549,10 @@ abstract class Vortex
 
             $pathToFirstRecursiveInclusion = $this->pathForNestedInclude($includeName, $availableIncludes);
             if ($pathToFirstRecursiveInclusion) {
-                $requestedIncludes[$pathToFirstRecursiveInclusion]['include'][] = substr($include,
-                    strlen($pathToFirstRecursiveInclusion) + 1);
+                $requestedIncludes[$pathToFirstRecursiveInclusion]['include'][] = substr(
+                    $include,
+                    strlen($pathToFirstRecursiveInclusion) + 1
+                );
                 continue;
             }
 
