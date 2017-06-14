@@ -26,12 +26,12 @@
     },
     "autoload": {
         "psr-4": {
-            "macroparts\\vortex\\": "src"
+            "Macroparts\\Vortex\\": "src"
         }
     },
     "autoload-dev": {
         "psr-4": {
-            "macroparts\\vortex\\": "tests"
+            "Macroparts\\Vortex\\": "tests"
         }
     },
     "scripts": {
