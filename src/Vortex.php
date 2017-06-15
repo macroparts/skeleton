@@ -244,7 +244,11 @@ abstract class Vortex
 
         $fields = $additionalParams[self::DIRECTIVE_FIELDS];
         if (count(array_intersect_key($this->finalFilterWhitelist, array_flip($fields))) !== count($fields)) {
-            throw new \UnserAllerLib_Api_V4_Exception_SafeForPrinting('Wrong use of "' . $filtername . '" filter. One of your specified fields is not filterable. Try using fields that are filterable.');
+            throw new \UnserAllerLib_Api_V4_Exception_SafeForPrinting(
+                'Wrong use of "' . $filtername . '" filter. '.
+                'One of your specified fields is not filterable. '.
+                'Try using fields that are filterable.'
+            );
         }
 
         unset($additionalParams[self::DIRECTIVE_FIELDS]);
@@ -1247,7 +1251,7 @@ abstract class Vortex
      * @param string $include
      * @return array|null
      */
-    public function findForApi($currentUser, $id, $language = '', $include)
+    public function findForApi($currentUser, $id, $language = '', $include = '')
     {
         $this->id = (int)$id;
         return $this->findOneForApi($currentUser, $language, "id:is($id)", $include, '');
@@ -1288,7 +1292,7 @@ abstract class Vortex
      * @param string $orderString
      * @return array|null
      */
-    protected function createSingleResult($currentUser, $language = '', $filterString, $includeString, $orderString)
+    protected function createSingleResult($currentUser, $language, $filterString, $includeString, $orderString)
     {
         $meta = $this->initMetaArray('', $language);
 
@@ -1473,7 +1477,14 @@ abstract class Vortex
     private function retrieveNestedCollectionResult($value, $nestingOptions, $language = '')
     {
         list($model, $filterFunction, $currentUser, $additionalParams) = $nestingOptions;
-        list($filterString, $includeString, $orderString, $limit, $page, $filterMode) = $this->parseAdditionalIncludeParams($additionalParams);
+        list(
+            $filterString,
+            $includeString,
+            $orderString,
+            $limit,
+            $page,
+            $filterMode
+        ) = $this->parseAdditionalIncludeParams($additionalParams);
 
         if ($filterString) {
             $filterString = $filterString . ',';
@@ -1567,7 +1578,7 @@ abstract class Vortex
     ) {
         $item = $this->flattenResultItem($item);
 
-        //Operations can depend on a prop that must be deleted and doing it too early causes errors, collect them and delete at the end
+        //If deleteion is not scheduled and done at the end, multiple tasks on same field can fail
         $scheduledDeletions = [];
 
         foreach ($scheduledFixes as $path => $fix) {
