@@ -93,11 +93,15 @@ abstract class Vortex
         $this->supportedLanguages = $supportedLanguages;
 
         //Cache customized whitelists merged with core whitelists
-        $this->finalFilterWhitelist = $this->getStaticPropertyOfClassMergedWithParents(static::class,
-            'filterWhitelist');
+        $this->finalFilterWhitelist = $this->getStaticPropertyOfClassMergedWithParents(
+            static::class,
+            'filterWhitelist'
+        );
         $this->finalOrderWhitelist = $this->getStaticPropertyOfClassMergedWithParents(static::class, 'orderWhitelist');
-        $this->finalIncludeWhitelist = $this->getStaticPropertyOfClassMergedWithParents(static::class,
-            'includeWhitelist');
+        $this->finalIncludeWhitelist = $this->getStaticPropertyOfClassMergedWithParents(
+            static::class,
+            'includeWhitelist'
+        );
     }
 
     /**
@@ -177,8 +181,14 @@ abstract class Vortex
      */
     private function filterAny($query, $alias, $currentUser, $additionalParams, $language, $filtername)
     {
-        return $this->abstractFilterMultipleFields($query, 'orX', $currentUser, $additionalParams, $language,
-            $filtername);
+        return $this->abstractFilterMultipleFields(
+            $query,
+            'orX',
+            $currentUser,
+            $additionalParams,
+            $language,
+            $filtername
+        );
     }
 
     /**
@@ -194,8 +204,14 @@ abstract class Vortex
      */
     private function filterAll($query, $alias, $currentUser, $additionalParams, $language, $filtername)
     {
-        return $this->abstractFilterMultipleFields($query, 'andX', $currentUser, $additionalParams, $language,
-            $filtername);
+        return $this->abstractFilterMultipleFields(
+            $query,
+            'andX',
+            $currentUser,
+            $additionalParams,
+            $language,
+            $filtername
+        );
     }
 
     /**
@@ -219,7 +235,9 @@ abstract class Vortex
     ) {
         if (!isset($additionalParams[self::DIRECTIVE_FIELDS])) {
             throw new \UnserAllerLib_Api_V4_Exception_MissingFilterDirective(
-                $filtername, self::DIRECTIVE_FIELDS, ['fieldname1', 'fieldname2'],
+                $filtername,
+                self::DIRECTIVE_FIELDS,
+                ['fieldname1', 'fieldname2'],
                 ':someFilterDirective(params):maySomeMoreDirectives...'
             );
         }
@@ -288,9 +306,13 @@ abstract class Vortex
     {
         $class = $class ? $class : static::class;
         $parent = get_parent_class($class);
-        return $parent ? $this->getStaticPropertyOfClassOrArray($class,
-                $propertyname) + $this->getStaticPropertyOfClassMergedWithParents($parent,
-                $propertyname) : $this->getStaticPropertyOfClassOrArray($class, $propertyname);
+        return $parent ? $this->getStaticPropertyOfClassOrArray(
+            $class,
+            $propertyname
+        ) + $this->getStaticPropertyOfClassMergedWithParents(
+            $parent,
+            $propertyname
+        ) : $this->getStaticPropertyOfClassOrArray($class, $propertyname);
     }
 
     private function getStaticPropertyOfClassOrArray($class, $propertyname)
@@ -888,8 +910,13 @@ abstract class Vortex
         $page
     ) {
         $this->addFilterStatements($incompleteStatement, $currentUser, $filterString, $language);
-        $completeStatement = $this->completeStatement($currentUser, $language, $incompleteStatement, $includeString,
-            '');
+        $completeStatement = $this->completeStatement(
+            $currentUser,
+            $language,
+            $incompleteStatement,
+            $includeString,
+            ''
+        );
 
         if ($limit > 0) {
             $completeStatement
@@ -911,7 +938,7 @@ abstract class Vortex
      * @param \UnserAller_Model_User $currentUser
      * @return \Doctrine\ORM\QueryBuilder
      */
-    protected abstract function initIncompleteStatement($currentUser);
+    abstract protected function initIncompleteStatement($currentUser);
 
     private function createIncompleteStatement(
         $currentUser,
@@ -920,8 +947,13 @@ abstract class Vortex
         $joinFiltersWith = 'AND',
         &$meta = []
     ) {
-        return $this->addFilterStatements($this->initIncompleteStatement($currentUser), $currentUser, $filterString,
-            $language, $joinFiltersWith);
+        return $this->addFilterStatements(
+            $this->initIncompleteStatement($currentUser),
+            $currentUser,
+            $filterString,
+            $language,
+            $joinFiltersWith
+        );
     }
 
     /**
@@ -965,11 +997,22 @@ abstract class Vortex
 
         $meta = $this->initMetaArray('', $language);
 
-        $incompleteStatement = $this->createIncompleteStatement($currentUser, $filterString, $language,
-            $joinFiltersWith, $meta);
+        $incompleteStatement = $this->createIncompleteStatement(
+            $currentUser,
+            $filterString,
+            $language,
+            $joinFiltersWith,
+            $meta
+        );
 
-        $completeStatement = $this->completeStatement($currentUser, $language, $incompleteStatement, $includeString,
-            $orderString, $meta);
+        $completeStatement = $this->completeStatement(
+            $currentUser,
+            $language,
+            $incompleteStatement,
+            $includeString,
+            $orderString,
+            $meta
+        );
         if ($limit > 0) {
             $completeStatement
                 ->setFirstResult(($page - 1) * $limit)
@@ -982,8 +1025,12 @@ abstract class Vortex
             'include' => $includeString,
             'page' => $page,
             'pageSize' => $limit,
-            'data' => $this->applyScheduledFixes($this->getRawResult($completeStatement), $currentUser, $language,
-                $meta),
+            'data' => $this->applyScheduledFixes(
+                $this->getRawResult($completeStatement),
+                $currentUser,
+                $language,
+                $meta
+            ),
             'meta' => $meta
         ];
     }
@@ -1017,8 +1064,16 @@ abstract class Vortex
         $page = 1,
         $filterMode = 'AND'
     ) {
-        return json_decode(json_encode($this->findMultipleForApi($this->getCurrentlyAuthenticatedUser(), $language,
-            $filterString, $includeString, $orderString, $limit, $page, $filterMode)), true);
+        return json_decode(json_encode($this->findMultipleForApi(
+            $this->getCurrentlyAuthenticatedUser(),
+            $language,
+            $filterString,
+            $includeString,
+            $orderString,
+            $limit,
+            $page,
+            $filterMode
+        )), true);
     }
 
     /**
@@ -1042,8 +1097,16 @@ abstract class Vortex
     ) {
         $page = 1;
 
-        $result = $this->findMultipleForApi($currentUser, $language, $filterString, $includeString, $orderString,
-            $limit, $page, $filterMode);
+        $result = $this->findMultipleForApi(
+            $currentUser,
+            $language,
+            $filterString,
+            $includeString,
+            $orderString,
+            $limit,
+            $page,
+            $filterMode
+        );
 
         yield $result;
 
@@ -1051,8 +1114,16 @@ abstract class Vortex
         unset($result);
         $page++;
         while ($page <= $totalPages) {
-            $result = $this->findMultipleForApi($currentUser, $language, $filterString, $includeString, $orderString,
-                $limit, $page, $filterMode);
+            $result = $this->findMultipleForApi(
+                $currentUser,
+                $language,
+                $filterString,
+                $includeString,
+                $orderString,
+                $limit,
+                $page,
+                $filterMode
+            );
             yield $result;
             $page++;
             unset($result);
@@ -1086,8 +1157,13 @@ abstract class Vortex
 
         $incompleteStatement = $this->createIncompleteStatement($currentUser, $filterString, $language, $filterMode);
 
-        $completeStatement = $this->completeStatement($currentUser, $language, $incompleteStatement, $includeString,
-            $orderString);
+        $completeStatement = $this->completeStatement(
+            $currentUser,
+            $language,
+            $incompleteStatement,
+            $includeString,
+            $orderString
+        );
         if ($limit > 0) {
             $completeStatement
                 ->setFirstResult(($page - 1) * $limit)
@@ -1155,8 +1231,13 @@ abstract class Vortex
      */
     public function findOne($language = '', $filterString = '', $includeString = '', $orderString = '')
     {
-        return json_decode(json_encode($this->findOneForApi($this->getCurrentlyAuthenticatedUser(), $language,
-            $filterString, $includeString, $orderString)), true);
+        return json_decode(json_encode($this->findOneForApi(
+            $this->getCurrentlyAuthenticatedUser(),
+            $language,
+            $filterString,
+            $includeString,
+            $orderString
+        )), true);
     }
 
     /**
@@ -1180,8 +1261,12 @@ abstract class Vortex
      */
     public function find($id, $language = '', $include = '')
     {
-        return json_decode(json_encode($this->findForApi($this->getCurrentlyAuthenticatedUser(), $id, $language,
-            $include)), true);
+        return json_decode(json_encode($this->findForApi(
+            $this->getCurrentlyAuthenticatedUser(),
+            $id,
+            $language,
+            $include
+        )), true);
     }
 
     /**
@@ -1189,8 +1274,10 @@ abstract class Vortex
      */
     private function getCurrentlyAuthenticatedUser()
     {
-        return $this->getEntityManager()->find(\UnserAller_Model_User::class,
-            (int)\Zend_Auth::getInstance()->getIdentity());
+        return $this->getEntityManager()->find(
+            \UnserAller_Model_User::class,
+            (int)\Zend_Auth::getInstance()->getIdentity()
+        );
     }
 
     /**
@@ -1207,9 +1294,12 @@ abstract class Vortex
 
         $result = $this->getRawResult(
             $this->completeStatement(
-                $currentUser, $language,
-                $this->createIncompleteStatement($currentUser, $filterString, $language, 'AND', $meta), $includeString,
-                $orderString, $meta
+                $currentUser,
+                $language,
+                $this->createIncompleteStatement($currentUser, $filterString, $language, 'AND', $meta),
+                $includeString,
+                $orderString,
+                $meta
             )->setFirstResult(0)->setMaxResults(1)
         );
 
@@ -1251,8 +1341,11 @@ abstract class Vortex
 
         return $this->addOrderStatements(
             $this->addIncludeStatements(
-                $statement->select($this->getDefaultSelectStatement($statement)), $currentUser, $language,
-                $includeString, $meta
+                $statement->select($this->getDefaultSelectStatement($statement)),
+                $currentUser,
+                $language,
+                $includeString,
+                $meta
             ),
             $currentUser,
             $orderString
@@ -1355,11 +1448,23 @@ abstract class Vortex
 
         $numberOfResults = count($result);
 
-        $this->applyFixesToItem($result[0], $scheduledFixes, $currentUser, $meta,
-            'retrieveNestedCollectionAndMergeMeta', $language);
+        $this->applyFixesToItem(
+            $result[0],
+            $scheduledFixes,
+            $currentUser,
+            $meta,
+            'retrieveNestedCollectionAndMergeMeta',
+            $language
+        );
         for ($i = 1; $i < $numberOfResults; $i++) {
-            $this->applyFixesToItem($result[$i], $scheduledFixes, $currentUser, $meta, 'retrieveNestedCollection',
-                $language);
+            $this->applyFixesToItem(
+                $result[$i],
+                $scheduledFixes,
+                $currentUser,
+                $meta,
+                'retrieveNestedCollection',
+                $language
+            );
         }
 
         return $result;
@@ -1381,7 +1486,13 @@ abstract class Vortex
         }
 
         return $this->getAdapter($model)->findMultipleForApi(
-            $currentUser, $language, $filterString . $filterFunctionString, $includeString, $orderString, $limit, $page,
+            $currentUser,
+            $language,
+            $filterString . $filterFunctionString,
+            $includeString,
+            $orderString,
+            $limit,
+            $page,
             $filterMode
         );
     }
@@ -1408,7 +1519,11 @@ abstract class Vortex
         }
 
         return $this->getAdapter($model)->findOneForApi(
-            $currentUser, $language, $filterString . sprintf($filterFunction, $value), $includeString, $orderString
+            $currentUser,
+            $language,
+            $filterString . sprintf($filterFunction, $value),
+            $includeString,
+            $orderString
         );
     }
 
@@ -1470,7 +1585,7 @@ abstract class Vortex
             if (isset($fix['additionalFilterValues'])) {
                 $value = [$value];
 
-                foreach ($fix['additionalFilterValues'] AS $additionalFilterValue) {
+                foreach ($fix['additionalFilterValues'] as $additionalFilterValue) {
                     $value[] = \UnserAllerLib_Tool_Array::readNestedValue($item, $additionalFilterValue);
                 }
             }
@@ -1481,8 +1596,13 @@ abstract class Vortex
             }
 
             if (isset($fix['nestSingle'])) {
-                $value = $this->retrieveNestedSingleAndMergeMeta($value, $fix['nestSingle'], $language,
-                    $fix['move'] ? $fix['move'] : $path, $meta);
+                $value = $this->retrieveNestedSingleAndMergeMeta(
+                    $value,
+                    $fix['nestSingle'],
+                    $language,
+                    $fix['move'] ? $fix['move'] : $path,
+                    $meta
+                );
             }
 
             if (isset($fix['filter'])) {
@@ -1549,8 +1669,10 @@ abstract class Vortex
      */
     protected function createConditionsForStringColumn($field, $query, $alias, $currentUser, $methods)
     {
-        if (\UnserAllerLib_Tool_Array::hasMoreKeysThan($methods,
-            ['contain', 'contains', 'is', 'not', 'false', 'true'])
+        if (\UnserAllerLib_Tool_Array::hasMoreKeysThan(
+            $methods,
+            ['contain', 'contains', 'is', 'not', 'false', 'true']
+        )
         ) {
             throw new \InvalidArgumentException('Invalid expression methods used');
         }
@@ -1588,8 +1710,11 @@ abstract class Vortex
             $expr = $query->expr()->orX();
             foreach ($this->supportedLanguages as $supportedLanguage) {
                 $expr->add($this->createConditionsForStringColumn(
-                    "COALESCE(" . $this->joinTranslationOnce($query, $translationName,
-                        $supportedLanguage) . ".translation, $fallbackField)",
+                    "COALESCE(" . $this->joinTranslationOnce(
+                        $query,
+                        $translationName,
+                        $supportedLanguage
+                    ) . ".translation, $fallbackField)",
                     $query,
                     $alias,
                     $currentUser,
@@ -1601,8 +1726,11 @@ abstract class Vortex
         }
 
         return $this->createConditionsForStringColumn(
-            "COALESCE(" . $this->joinTranslationOnce($query, $translationName,
-                $language) . ".translation, $fallbackField)",
+            "COALESCE(" . $this->joinTranslationOnce(
+                $query,
+                $translationName,
+                $language
+            ) . ".translation, $fallbackField)",
             $query,
             $alias,
             $currentUser,
@@ -1629,8 +1757,10 @@ abstract class Vortex
      */
     protected function createConditionsForDatetimeColumn($field, $query, $alias, $currentUser, $methods)
     {
-        if (\UnserAllerLib_Tool_Array::hasMoreKeysThan($methods,
-            ['is', 'not', 'gt', 'gte', 'lt', 'lte', 'false', 'true'])
+        if (\UnserAllerLib_Tool_Array::hasMoreKeysThan(
+            $methods,
+            ['is', 'not', 'gt', 'gte', 'lt', 'lte', 'false', 'true']
+        )
         ) {
             throw new \InvalidArgumentException('Invalid expression methods used');
         }
@@ -1686,8 +1816,10 @@ abstract class Vortex
      */
     protected function createConditionsForIntegerSubquery($subquery, $query, $alias, $currentUser, $methods)
     {
-        if (\UnserAllerLib_Tool_Array::hasMoreKeysThan($methods,
-            ['false', 'true', 'gt', 'gte', 'lt', 'lte', 'eq', 'any', 'null'])
+        if (\UnserAllerLib_Tool_Array::hasMoreKeysThan(
+            $methods,
+            ['false', 'true', 'gt', 'gte', 'lt', 'lte', 'eq', 'any', 'null']
+        )
         ) {
             throw new \InvalidArgumentException('Invalid expression methods used');
         }
@@ -1781,8 +1913,10 @@ abstract class Vortex
      */
     protected function createConditionsForIntegerColumn($col, $query, $alias, $currentUser, $methods)
     {
-        if (\UnserAllerLib_Tool_Array::hasMoreKeysThan($methods,
-            ['is', 'not', 'gt', 'gte', 'lt', 'lte', 'false', 'true'])
+        if (\UnserAllerLib_Tool_Array::hasMoreKeysThan(
+            $methods,
+            ['is', 'not', 'gt', 'gte', 'lt', 'lte', 'false', 'true']
+        )
         ) {
             throw new \InvalidArgumentException('Invalid expression methods used');
         }
@@ -1816,8 +1950,10 @@ abstract class Vortex
      */
     protected function createConditionsForIntegerColumnInternal($col, $query, $alias, $currentUser, $methods)
     {
-        if (\UnserAllerLib_Tool_Array::hasMoreKeysThan($methods,
-            ['is', 'not', 'gt', 'gte', 'lt', 'lte', 'false', 'true', 'any'])
+        if (\UnserAllerLib_Tool_Array::hasMoreKeysThan(
+            $methods,
+            ['is', 'not', 'gt', 'gte', 'lt', 'lte', 'false', 'true', 'any']
+        )
         ) {
             throw new \InvalidArgumentException('Invalid expression methods used');
         }
@@ -1863,8 +1999,10 @@ abstract class Vortex
     {
         $expression = $query->expr()->andX();
         foreach ($methods as $method => $params) {
-            $expression->add(call_user_func_array([$this, $prefix . ucfirst($method) . 'Expression'],
-                [$query, $field, $params, $alias, $currentUser]));
+            $expression->add(call_user_func_array(
+                [$this, $prefix . ucfirst($method) . 'Expression'],
+                [$query, $field, $params, $alias, $currentUser]
+            ));
         }
 
         return $expression;
@@ -2594,8 +2732,11 @@ abstract class Vortex
         if (!$language) {
             $query->addSelect("($col) $alias");
         } else {
-            $query->addSelect("(COALESCE(" . $this->joinTranslationOnce($query, $translationName,
-                    $language) . ".translation,$col)) $alias");
+            $query->addSelect("(COALESCE(" . $this->joinTranslationOnce(
+                $query,
+                $translationName,
+                $language
+            ) . ".translation,$col)) $alias");
         }
 
         return [
