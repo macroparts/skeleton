@@ -517,10 +517,10 @@ abstract class Vortex
         $rootAlias = $this->getRootAlias($incompleteStatement);
         $primaryIndexCol = $rootAlias . '.' . $this->getPrimaryIndexCol();
 
-        if($incompleteStatement->getDQLPart('having')){
+        if ($incompleteStatement->getDQLPart('having')) {
             return (int)$incompleteStatement->getEntityManager()->createQueryBuilder()
                 ->select('COUNT(x)')
-                ->from(array_shift($incompleteStatement->getRootEntities()),'x')
+                ->from(array_shift($incompleteStatement->getRootEntities()), 'x')
                 ->where(
                     $incompleteStatement->expr()->in(
                         'x.'.$this->getPrimaryIndexCol(),
