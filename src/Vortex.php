@@ -321,7 +321,6 @@ abstract class Vortex
     {
         $include = $this->finalIncludeWhitelist[$includeName];
         if (isset($include['model'])) {
-            echo $includeName;
             $meta['modelnameIndex']["{$include['model']}"][] = $includeName;
         }
     }
