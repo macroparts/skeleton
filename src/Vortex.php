@@ -67,13 +67,6 @@ abstract class Vortex
     protected $id = null;
 
     /**
-     * Ignore total row count functionality
-     *
-     * @var bool
-     */
-    protected $ignoreCount = false;
-
-    /**
      * All parameters unsorted
      *
      * @var array
@@ -522,12 +515,21 @@ abstract class Vortex
      */
     private function executeRowCountStatement($incompleteStatement)
     {
-        if ($this->ignoreCount) {
-            return 0;
-        }
-
         $rootAlias = $this->getRootAlias($incompleteStatement);
         $primaryIndexCol = $rootAlias . '.' . $this->getPrimaryIndexCol();
+
+        if($incompleteStatement->getDQLPart('having')){
+            return (int)$incompleteStatement->getEntityManager()->createQueryBuilder()
+                ->select('COUNT(x)')
+                ->from(array_shift($incompleteStatement->getRootEntities()),'x')
+                ->where(
+                    $incompleteStatement->expr()->in(
+                        'x.'.$this->getPrimaryIndexCol(),
+                        $incompleteStatement->select($primaryIndexCol)->getDQL()
+                    )
+                )->setParameters($incompleteStatement->getParameters())->getQuery()->getSingleScalarResult();
+        }
+
         return (int)$incompleteStatement
             ->select("COUNT(DISTINCT $primaryIndexCol)")
             ->getQuery()
