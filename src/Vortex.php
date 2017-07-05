@@ -518,9 +518,10 @@ abstract class Vortex
         $primaryIndexCol = $rootAlias . '.' . $this->getPrimaryIndexCol();
 
         if ($incompleteStatement->getDQLPart('having')) {
+            $rootEntities = $incompleteStatement->getRootEntities();
             return (int)$incompleteStatement->getEntityManager()->createQueryBuilder()
                 ->select('COUNT(x)')
-                ->from(array_shift($incompleteStatement->getRootEntities()), 'x')
+                ->from(array_shift($rootEntities), 'x')
                 ->where(
                     $incompleteStatement->expr()->in(
                         'x.'.$this->getPrimaryIndexCol(),
@@ -871,7 +872,8 @@ abstract class Vortex
      */
     protected function filterId($query, $alias, $currentUser, $additionalParams)
     {
-        $rootAlias = array_shift($query->getRootAliases());
+        $rootAliasArr = $query->getRootAliases();
+        $rootAlias = array_shift($rootAliasArr);
         return $this->createConditionsForEntityColumn("$rootAlias.id", $query, $alias, $currentUser, $additionalParams);
     }
 
@@ -1377,7 +1379,8 @@ abstract class Vortex
      */
     protected function getRootAlias($query)
     {
-        return array_shift($query->getRootAliases());
+        $rootAliasArr = $query->getRootAliases();
+        return array_shift($rootAliasArr);
     }
 
     /**
