@@ -73,7 +73,7 @@ abstract class Vortex
      */
     protected $unsortedParams = [];
 
-    private $supportedLanguages;
+    protected $supportedLanguages;
 
 
     private $finalIncludeWhitelist;
@@ -304,12 +304,12 @@ abstract class Vortex
         $class = $class ? $class : static::class;
         $parent = get_parent_class($class);
         return $parent ? $this->getStaticPropertyOfClassOrArray(
-            $class,
-            $propertyname
-        ) + $this->getStaticPropertyOfClassMergedWithParents(
-            $parent,
-            $propertyname
-        ) : $this->getStaticPropertyOfClassOrArray($class, $propertyname);
+                $class,
+                $propertyname
+            ) + $this->getStaticPropertyOfClassMergedWithParents(
+                $parent,
+                $propertyname
+            ) : $this->getStaticPropertyOfClassOrArray($class, $propertyname);
     }
 
     private function getStaticPropertyOfClassOrArray($class, $propertyname)
@@ -361,6 +361,7 @@ abstract class Vortex
         return $query->andWhere($expression);
     }
 
+    abstract protected function getFallbackLanguage($resultItem, $requestedLanguage);
 
     /**
      * Transforms additionalParams for included collections into params which are used
@@ -1314,7 +1315,9 @@ abstract class Vortex
             return null;
         }
 
-        return $this->applyScheduledFixes($result, $currentUser, $language, $meta)[0] + ['meta' => $meta];
+        $result = $this->applyScheduledFixes($result, $currentUser, $language, $meta)[0];
+        $result['meta'] = $result['meta'] + $meta;
+        return $result;
     }
 
     protected function getDefaultPostProcessDirections()
@@ -1438,6 +1441,26 @@ abstract class Vortex
     }
 
     /**
+     * @uses getFallbackLanguage
+     * @uses getRequestedLanguage
+     * @return callable
+     */
+    private function getItemLanguageGetter($language)
+    {
+        return $language === '' ? 'getFallbackLanguage' : 'getRequestedLanguage';
+    }
+
+    /**
+     * @param mixed[] $resultItem
+     * @param string $requestedLanguage
+     * @return string
+     */
+    private function getRequestedLanguage($resultItem, $requestedLanguage)
+    {
+        return $requestedLanguage;
+    }
+
+    /**
      * Executes all operations that were scheduled for post processing
      *
      * @param array $result
@@ -1462,7 +1485,8 @@ abstract class Vortex
             $currentUser,
             $meta,
             'retrieveNestedCollectionAndMergeMeta',
-            $language
+            $language,
+            $this->getItemLanguageGetter($language)
         );
         for ($i = 1; $i < $numberOfResults; $i++) {
             $this->applyFixesToItem(
@@ -1471,7 +1495,8 @@ abstract class Vortex
                 $currentUser,
                 $meta,
                 'retrieveNestedCollection',
-                $language
+                $language,
+                $this->getItemLanguageGetter($language)
             );
         }
 
@@ -1488,7 +1513,7 @@ abstract class Vortex
             $limit,
             $page,
             $filterMode
-        ) = $this->parseAdditionalIncludeParams($additionalParams);
+            ) = $this->parseAdditionalIncludeParams($additionalParams);
 
         if ($filterString) {
             $filterString = $filterString . ',';
@@ -1578,7 +1603,8 @@ abstract class Vortex
         $currentUser,
         &$meta,
         $collectionNestingMethod,
-        $language
+        $language,
+        $itemLanguageGetter
     ) {
         $item = $this->flattenResultItem($item);
 
@@ -1606,15 +1632,20 @@ abstract class Vortex
             }
 
             if (isset($fix['nestCollection'])) {
-                $value = $this->$collectionNestingMethod($value, $fix['nestCollection'], $language,
-                    $fix['move'] ? $fix['move'] : $path, $meta);
+                $value = $this->$collectionNestingMethod(
+                    $value,
+                    $fix['nestCollection'],
+                    $this->$itemLanguageGetter($item, $language),
+                    $fix['move'] ? $fix['move'] : $path,
+                    $meta
+                );
             }
 
             if (isset($fix['nestSingle'])) {
                 $value = $this->retrieveNestedSingleAndMergeMeta(
                     $value,
                     $fix['nestSingle'],
-                    $language,
+                    $this->$itemLanguageGetter($item, $language),
                     $fix['move'] ? $fix['move'] : $path,
                     $meta
                 );
@@ -1643,6 +1674,22 @@ abstract class Vortex
         foreach ($scheduledDeletions as $path => $fix) {
             \UnserAllerLib_Tool_Array::unsetNestedValue($item, $path);
         }
+
+        $item['meta'] = $this->createMetadataForResultItem($item, $language, $itemLanguageGetter);
+    }
+
+    /**
+     * @param mixed[] $resultItem
+     * @param string $requestedLanguage
+     * @param callable $itemLanguageGetter
+     * @return array
+     */
+    private function createMetadataForResultItem($resultItem, $requestedLanguage, $itemLanguageGetter)
+    {
+        return [
+            'language' => $this->$itemLanguageGetter($resultItem, $requestedLanguage),
+            'model' => $this->getModelForMeta()
+        ];
     }
 
     /**
@@ -2748,10 +2795,10 @@ abstract class Vortex
             $query->addSelect("($col) $alias");
         } else {
             $query->addSelect("(COALESCE(" . $this->joinTranslationOnce(
-                $query,
-                $translationName,
-                $language
-            ) . ".translation,$col)) $alias");
+                    $query,
+                    $translationName,
+                    $language
+                ) . ".translation,$col)) $alias");
         }
 
         return [
