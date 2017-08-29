@@ -2,11 +2,15 @@
 
 namespace Macroparts\Vortex;
 
+use Doctrine\ORM\Query;
+
 abstract class Vortex
 {
     use \UnserAllerLib_Api_V4_AdapterProvider;
 
     const DIRECTIVE_FIELDS = 'fields';
+    const META_ON_OBJECT_LEVEL_ENABLED = 1;
+    const META_ON_OBJECT_LEVEL_DISABLED = 0;
 
     /**
      * @var \Doctrine\ORM\EntityManager
@@ -896,53 +900,6 @@ abstract class Vortex
     }
 
     /**
-     * Creates fixed, paginated results from an $incompleteStatement and a requiredIncludes string. An incomplete
-     * statement is a query builder instance with only froms, joins and where conditions (groupbys, havings not tested).
-     *
-     * @param \UnserAller_Model_User $currentUser
-     * @param $language
-     * @param \Doctrine\ORM\QueryBuilder $incompleteStatement
-     * @param string $filterString
-     * @param string $includeString
-     * @param int $limit
-     * @param int $page
-     * @return array
-     */
-    protected function createPaginatedResults(
-        $currentUser,
-        $language,
-        $incompleteStatement,
-        $filterString,
-        $includeString,
-        $limit,
-        $page
-    ) {
-        $this->addFilterStatements($incompleteStatement, $currentUser, $filterString, $language);
-        $completeStatement = $this->completeStatement(
-            $currentUser,
-            $language,
-            $incompleteStatement,
-            $includeString,
-            ''
-        );
-
-        if ($limit > 0) {
-            $completeStatement
-                ->setFirstResult(($page - 1) * $limit)
-                ->setMaxResults($limit);
-        }
-
-        return [
-            'totalPages' => $this->calculateTotalPages($incompleteStatement, $limit),
-            'page' => $page,
-            'filter' => $filterString,
-            'include' => $includeString,
-            'pageSize' => $limit,
-            'data' => $this->applyScheduledFixes($this->getRawResult($completeStatement), $currentUser, $language)
-        ];
-    }
-
-    /**
      * @param \UnserAller_Model_User $currentUser
      * @return \Doctrine\ORM\QueryBuilder
      */
@@ -980,13 +937,14 @@ abstract class Vortex
 
     /**
      * @param \UnserAller_Model_User $currentUser
-     * @param $language
+     * @param string $language
      * @param string $filterString
      * @param string $includeString
      * @param string $orderString
      * @param int $limit
      * @param int $page
      * @param string $joinFiltersWith
+     * @param int $metaOnObjectLevelOption
      * @return array
      */
     public function findMultipleForApi(
@@ -997,7 +955,8 @@ abstract class Vortex
         $orderString = '',
         $limit = 0,
         $page = 1,
-        $joinFiltersWith = 'AND'
+        $joinFiltersWith = 'AND',
+        $metaOnObjectLevelOption = self::META_ON_OBJECT_LEVEL_ENABLED
     ) {
         if ($page <= 0) {
             $page = 1;
@@ -1037,7 +996,8 @@ abstract class Vortex
                 $this->getRawResult($completeStatement),
                 $currentUser,
                 $language,
-                $meta
+                $meta,
+                $metaOnObjectLevelOption
             ),
             'meta' => $meta
         ];
@@ -1080,7 +1040,8 @@ abstract class Vortex
             $orderString,
             $limit,
             $page,
-            $filterMode
+            $filterMode,
+            self::META_ON_OBJECT_LEVEL_DISABLED
         )), true);
     }
 
@@ -1182,7 +1143,7 @@ abstract class Vortex
     }
 
     /**
-     * @param \Doctrine\ORM\Query $query
+     * @param Query $query
      * @return array
      */
     private function getNativeSqlIngredients($query)
@@ -1218,6 +1179,7 @@ abstract class Vortex
      * @param string $filterString
      * @param string $includeString
      * @param string $orderString
+     * @param int $metaOnObjectLevelOption
      * @return array|null
      */
     public function findOneForApi(
@@ -1225,9 +1187,17 @@ abstract class Vortex
         $language = '',
         $filterString = '',
         $includeString = '',
-        $orderString = ''
+        $orderString = '',
+        $metaOnObjectLevelOption = self::META_ON_OBJECT_LEVEL_ENABLED
     ) {
-        return $this->createSingleResult($currentUser, $language, $filterString, $includeString, $orderString);
+        return $this->createSingleResult(
+            $currentUser,
+            $language,
+            $filterString,
+            $includeString,
+            $orderString,
+            $metaOnObjectLevelOption
+        );
     }
 
     /**
@@ -1244,7 +1214,8 @@ abstract class Vortex
             $language,
             $filterString,
             $includeString,
-            $orderString
+            $orderString,
+            self::META_ON_OBJECT_LEVEL_DISABLED
         )), true);
     }
 
@@ -1253,12 +1224,25 @@ abstract class Vortex
      * @param int $id
      * @param string $language
      * @param string $include
+     * @param int $metaOnObjectLevelOption
      * @return array|null
      */
-    public function findForApi($currentUser, $id, $language = '', $include = '')
-    {
+    public function findForApi(
+        $currentUser,
+        $id,
+        $language = '',
+        $include = '',
+        $metaOnObjectLevelOption = self::META_ON_OBJECT_LEVEL_ENABLED
+    ) {
         $this->id = (int)$id;
-        return $this->findOneForApi($currentUser, $language, "id:is($id)", $include, '');
+        return $this->findOneForApi(
+            $currentUser,
+            $language,
+            "id:is($id)",
+            $include,
+            '',
+            $metaOnObjectLevelOption
+        );
     }
 
     /**
@@ -1273,7 +1257,8 @@ abstract class Vortex
             $this->getCurrentlyAuthenticatedUser(),
             $id,
             $language,
-            $include
+            $include,
+            self::META_ON_OBJECT_LEVEL_DISABLED
         )), true);
     }
 
@@ -1294,10 +1279,17 @@ abstract class Vortex
      * @param string $filterString
      * @param string $includeString
      * @param string $orderString
+     * @param int $metaOnObjectLevelOption
      * @return array|null
      */
-    protected function createSingleResult($currentUser, $language, $filterString, $includeString, $orderString)
-    {
+    protected function createSingleResult(
+        $currentUser,
+        $language,
+        $filterString,
+        $includeString,
+        $orderString,
+        $metaOnObjectLevelOption = self::META_ON_OBJECT_LEVEL_ENABLED
+    ) {
         $meta = $this->initMetaArray('', $language);
 
         $result = $this->getRawResult(
@@ -1315,8 +1307,10 @@ abstract class Vortex
             return null;
         }
 
-        $result = $this->applyScheduledFixes($result, $currentUser, $language, $meta)[0];
-        $result['meta'] = $result['meta'] + $meta;
+        $result = $this->applyScheduledFixes($result, $currentUser, $language, $meta, $metaOnObjectLevelOption)[0];
+        if ($metaOnObjectLevelOption === self::META_ON_OBJECT_LEVEL_ENABLED) {
+            $result['meta'] = $result['meta'] + $meta;
+        }
         return $result;
     }
 
@@ -1407,7 +1401,7 @@ abstract class Vortex
     {
         //Output raw sql here if you like to debug hard
         //echo $statement->getQuery()->getSQL(); die;
-        return $statement->getQuery()->getResult(\Doctrine\ORM\Query::HYDRATE_ARRAY);
+        return $statement->getQuery()->getResult(Query::HYDRATE_ARRAY);
     }
 
     /**
@@ -1443,6 +1437,7 @@ abstract class Vortex
     /**
      * @uses getFallbackLanguage
      * @uses getRequestedLanguage
+     * @param $language
      * @return callable
      */
     private function getItemLanguageGetter($language)
@@ -1467,10 +1462,16 @@ abstract class Vortex
      * @param \UnserAller_Model_User $currentUser
      * @param $language
      * @param array $meta
+     * @param int $metaOnObjectLevelOption
      * @return array
      */
-    private function applyScheduledFixes($result, $currentUser, $language, &$meta = [])
-    {
+    private function applyScheduledFixes(
+        $result,
+        $currentUser,
+        $language,
+        &$meta = [],
+        $metaOnObjectLevelOption = self::META_ON_OBJECT_LEVEL_ENABLED
+    ) {
         $scheduledFixes = $this->flushResultArrayFixSchedule();
 
         if (!$result) {
@@ -1486,7 +1487,8 @@ abstract class Vortex
             $meta,
             'retrieveNestedCollectionAndMergeMeta',
             $language,
-            $this->getItemLanguageGetter($language)
+            $this->getItemLanguageGetter($language),
+            $metaOnObjectLevelOption
         );
         for ($i = 1; $i < $numberOfResults; $i++) {
             $this->applyFixesToItem(
@@ -1496,7 +1498,8 @@ abstract class Vortex
                 $meta,
                 'retrieveNestedCollection',
                 $language,
-                $this->getItemLanguageGetter($language)
+                $this->getItemLanguageGetter($language),
+                $metaOnObjectLevelOption
             );
         }
 
@@ -1594,6 +1597,8 @@ abstract class Vortex
      * @param $meta
      * @param $collectionNestingMethod
      * @param $language
+     * @param $itemLanguageGetter
+     * @param int $metaOnObjectLevelOption
      * @uses retrieveNestedCollection
      * @uses retrieveNestedCollectionAndMergeMeta
      */
@@ -1604,7 +1609,8 @@ abstract class Vortex
         &$meta,
         $collectionNestingMethod,
         $language,
-        $itemLanguageGetter
+        $itemLanguageGetter,
+        $metaOnObjectLevelOption = self::META_ON_OBJECT_LEVEL_ENABLED
     ) {
         $item = $this->flattenResultItem($item);
 
@@ -1675,7 +1681,9 @@ abstract class Vortex
             \UnserAllerLib_Tool_Array::unsetNestedValue($item, $path);
         }
 
-        $item['meta'] = $this->createMetadataForResultItem($item, $language, $itemLanguageGetter);
+        if ($metaOnObjectLevelOption === self::META_ON_OBJECT_LEVEL_ENABLED) {
+            $item['meta'] = $this->createMetadataForResultItem($item, $language, $itemLanguageGetter);
+        }
     }
 
     /**
@@ -1840,17 +1848,45 @@ abstract class Vortex
      * @uses integerFalseExpression
      * @uses integerTrueExpression
      * @uses integerIsExpression
+     * @uses integerIsOrNullExpression
      * @uses integerNotExpression
      * @uses integerMeExpression
      * @uses integerNotmeExpression
      */
     protected function createConditionsForEntityColumn($field, $query, $alias, $currentUser, $methods)
     {
-        if (\UnserAllerLib_Tool_Array::hasMoreKeysThan($methods, ['false', 'true', 'is', 'not', 'me', 'notme'])) {
+        if (\UnserAllerLib_Tool_Array::hasMoreKeysThan(
+            $methods,
+            ['false', 'true', 'is', 'not', 'me', 'notme', 'isOrNull']
+        )) {
             throw new \InvalidArgumentException('Invalid expression methods used');
         }
 
         return $this->createExpression('integer', $field, $query, $alias, $currentUser, $methods);
+    }
+
+    /**
+     * @param $subquery
+     * @param $query
+     * @param $alias
+     * @param $currentUser
+     * @param $methods
+     * @return \Doctrine\ORM\Query\Expr\Andx
+     * @uses subqueryIsExpression
+     * @uses subqueryFalseExpression
+     * @uses subqueryTrueExpression
+     * @uses subqueryNotExpression
+     * @uses subqueryMeExpression
+     * @uses subqueryNotmeExpression
+     * @uses subqueryEqExpression
+     */
+    protected function createConditionsForEntitySubquery($subquery, $query, $alias, $currentUser, $methods)
+    {
+        if (\UnserAllerLib_Tool_Array::hasMoreKeysThan($methods, ['false', 'true', 'is', 'not', 'me', 'notme', 'eq'])) {
+            throw new \InvalidArgumentException('Invalid expression methods used');
+        }
+
+        return $this->createExpression('subquery', $subquery, $query, $alias, $currentUser, $methods);
     }
 
     /**
@@ -2209,6 +2245,18 @@ abstract class Vortex
 
     /**
      * @param \Doctrine\ORM\QueryBuilder $query
+     * @param array $subquery
+     * @param array $params
+     * @param string $alias
+     * @return mixed
+     */
+    private function subqueryIsExpression($query, $subquery, $params, $alias)
+    {
+        return $query->expr()->in('(' . $this->consumeSubquery($subquery) . ')', $params);
+    }
+
+    /**
+     * @param \Doctrine\ORM\QueryBuilder $query
      * @param string $field
      * @param array $params
      * @param string $alias
@@ -2229,6 +2277,21 @@ abstract class Vortex
     private function integerIsExpression($query, $field, $params, $alias)
     {
         return $query->expr()->in($field, $params);
+    }
+
+    /**
+     * @param \Doctrine\ORM\QueryBuilder $query
+     * @param string $field
+     * @param array $params
+     * @param string $alias
+     * @return mixed
+     */
+    private function integerIsOrNullExpression($query, $field, $params, $alias)
+    {
+        return $query->expr()->orX(
+            $query->expr()->in($field, $params),
+            $query->expr()->isNull($field)
+        );
     }
 
     /**
@@ -2781,7 +2844,7 @@ abstract class Vortex
      * @param string $name
      * @param string $translationName
      * @param string $language
-     * @return array|void
+     * @return array
      */
     protected function abstractIncludeMultilanguageStringColumn(
         $query,
