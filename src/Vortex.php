@@ -308,12 +308,12 @@ abstract class Vortex
         $class = $class ? $class : static::class;
         $parent = get_parent_class($class);
         return $parent ? $this->getStaticPropertyOfClassOrArray(
-                $class,
-                $propertyname
-            ) + $this->getStaticPropertyOfClassMergedWithParents(
-                $parent,
-                $propertyname
-            ) : $this->getStaticPropertyOfClassOrArray($class, $propertyname);
+            $class,
+            $propertyname
+        ) + $this->getStaticPropertyOfClassMergedWithParents(
+            $parent,
+            $propertyname
+        ) : $this->getStaticPropertyOfClassOrArray($class, $propertyname);
     }
 
     private function getStaticPropertyOfClassOrArray($class, $propertyname)
@@ -1845,24 +1845,28 @@ abstract class Vortex
      * @param \UnserAller_Model_User $currentUser
      * @param array $methods
      * @return \Doctrine\ORM\Query\Expr\Andx
-     * @uses integerFalseExpression
-     * @uses integerTrueExpression
-     * @uses integerIsExpression
-     * @uses integerIsOrNullExpression
-     * @uses integerNotExpression
-     * @uses integerMeExpression
-     * @uses integerNotmeExpression
+     * @uses entityFalseExpression
+     * @uses entityTrueExpression
+     * @uses entityIsExpression
+     * @uses entityIsOrNullExpression
+     * @uses entityNotExpression
+     * @uses entityMeExpression
+     * @uses entityNotmeExpression
+     * @uses entityLtExpression
+     * @uses entityLteExpression
+     * @uses entityGtExpression
+     * @uses entityGteExpression
      */
     protected function createConditionsForEntityColumn($field, $query, $alias, $currentUser, $methods)
     {
         if (\UnserAllerLib_Tool_Array::hasMoreKeysThan(
             $methods,
-            ['false', 'true', 'is', 'not', 'me', 'notme', 'isOrNull']
+            ['false', 'true', 'is', 'not', 'me', 'notme', 'isOrNull', 'lt', 'lte', 'gt', 'gte']
         )) {
             throw new \InvalidArgumentException('Invalid expression methods used');
         }
 
-        return $this->createExpression('integer', $field, $query, $alias, $currentUser, $methods);
+        return $this->createExpression('entity', $field, $query, $alias, $currentUser, $methods);
     }
 
     /**
@@ -1887,6 +1891,172 @@ abstract class Vortex
         }
 
         return $this->createExpression('subquery', $subquery, $query, $alias, $currentUser, $methods);
+    }
+
+    /**
+     * @param \Doctrine\ORM\QueryBuilder $query
+     * @param string $field
+     * @param array $params
+     * @param string $alias
+     * @return mixed
+     */
+    private function entityIsOrNullExpression($query, $field, $params, $alias)
+    {
+        return $query->expr()->orX(
+            $query->expr()->in($field, $params),
+            $query->expr()->isNull($field)
+        );
+    }
+
+    /**
+     * @param \Doctrine\ORM\QueryBuilder $query
+     * @param string $field
+     * @param array $params
+     * @param string $alias
+     * @param \UnserAller_Model_User $currentUser
+     * @return mixed
+     * @throws \UnserAllerLib_Api_V4_Exception_UserRequiredButNotAuthenticated
+     */
+    private function entityMeExpression($query, $field, $params, $alias, $currentUser)
+    {
+        if (!$currentUser) {
+            throw new \UnserAllerLib_Api_V4_Exception_UserRequiredButNotAuthenticated();
+        }
+        return $query->expr()->eq($field, $currentUser->getId());
+    }
+
+
+    /**
+     * @param \Doctrine\ORM\QueryBuilder $query
+     * @param string $field
+     * @param array $params
+     * @param string $alias
+     * @param \UnserAller_Model_User $currentUser
+     * @return \Doctrine\ORM\Query\Expr\Comparison
+     * @throws \UnserAllerLib_Api_V4_Exception_UserRequiredButNotAuthenticated
+     */
+    private function entityNotmeExpression($query, $field, $params, $alias, $currentUser)
+    {
+        if (!$currentUser) {
+            throw new \UnserAllerLib_Api_V4_Exception_UserRequiredButNotAuthenticated();
+        }
+        return $query->expr()->neq($field, $currentUser->getId());
+    }
+
+    /**
+     * @param \Doctrine\ORM\QueryBuilder $query
+     * @param string $field
+     * @param array $params
+     * @param string $alias
+     * @return \Doctrine\ORM\Query\Expr\Func
+     */
+    private function entityNotExpression($query, $field, $params, $alias)
+    {
+        return $query->expr()->notIn($field, $params);
+    }
+
+    /**
+     * @param \Doctrine\ORM\QueryBuilder $query
+     * @param string $field
+     * @param array $params
+     * @param string $alias
+     * @return \Doctrine\ORM\Query\Expr\Comparison
+     */
+    private function entityFalseExpression($query, $field, $params, $alias)
+    {
+        return $query->expr()->eq("COALESCE(IDENTITY($field),0)", 0);
+    }
+
+    /**
+     * @param \Doctrine\ORM\QueryBuilder $query
+     * @param string $field
+     * @param array $params
+     * @param string $alias
+     * @return \Doctrine\ORM\Query\Expr\Comparison
+     */
+    private function entityTrueExpression($query, $field, $params, $alias)
+    {
+        return $query->expr()->neq("COALESCE(IDENTITY($field),0)", 0);
+    }
+
+    /**
+     * @param \Doctrine\ORM\QueryBuilder $query
+     * @param string $field
+     * @param array $params
+     * @param string $alias
+     * @return mixed
+     */
+    private function entityLtExpression($query, $field, $params, $alias)
+    {
+        $lt = $query->expr()->orX();
+        $index = 0;
+        foreach ($params as $datetime) {
+            $lt->add($query->expr()->lt("IDENTITY($field)", ":lt_{$alias}_{$index}"));
+            $query->setParameter("lt_{$alias}_{$index}", $datetime);
+            $index++;
+        }
+
+        return $lt;
+    }
+
+    /**
+     * @param \Doctrine\ORM\QueryBuilder $query
+     * @param string $field
+     * @param array $params
+     * @param string $alias
+     * @return mixed
+     */
+    private function entityLteExpression($query, $field, $params, $alias)
+    {
+        $lte = $query->expr()->orX();
+        $index = 0;
+        foreach ($params as $datetime) {
+            $lte->add($query->expr()->lte("IDENTITY($field)", ":lte_{$alias}_{$index}"));
+            $query->setParameter("lte_{$alias}_{$index}", $datetime);
+            $index++;
+        }
+
+        return $lte;
+    }
+
+    /**
+     * @param \Doctrine\ORM\QueryBuilder $query
+     * @param string $field
+     * @param array $params
+     * @param string $alias
+     * @return mixed
+     */
+    private function entityGtExpression($query, $field, $params, $alias)
+    {
+        $gt = $query->expr()->orX();
+        $index = 0;
+        foreach ($params as $datetime) {
+            $gt->add($query->expr()->gt("IDENTITY($field)", ":gt_{$alias}_{$index}"));
+            $query->setParameter("gt_{$alias}_{$index}", $datetime);
+            $index++;
+        }
+
+        return $gt;
+    }
+
+    /**
+     * @param \Doctrine\ORM\QueryBuilder $query
+     * @param string $field
+     * @param array $params
+     * @param string $alias
+     * @return mixed
+     */
+    private function entityGteExpression($query, $field, $params, $alias)
+    {
+        $gte = $query->expr()->orX();
+        $index = 0;
+        foreach ($params as $datetime) {
+            $gte->add($query->expr()->gte("IDENTITY($field)", ":gte_{$alias}_{$index}"));
+            $query->setParameter("gte_{$alias}_{$index}", $datetime);
+            $index++;
+        }
+
+        return $gte;
     }
 
     /**
@@ -2286,41 +2456,9 @@ abstract class Vortex
      * @param string $alias
      * @return mixed
      */
-    private function integerIsOrNullExpression($query, $field, $params, $alias)
-    {
-        return $query->expr()->orX(
-            $query->expr()->in($field, $params),
-            $query->expr()->isNull($field)
-        );
-    }
-
-    /**
-     * @param \Doctrine\ORM\QueryBuilder $query
-     * @param string $field
-     * @param array $params
-     * @param string $alias
-     * @return mixed
-     */
     private function stringIsExpression($query, $field, $params, $alias)
     {
         return $query->expr()->in($field, $params);
-    }
-
-    /**
-     * @param \Doctrine\ORM\QueryBuilder $query
-     * @param string $field
-     * @param array $params
-     * @param string $alias
-     * @param \UnserAller_Model_User $currentUser
-     * @return mixed
-     * @throws \UnserAllerLib_Api_V4_Exception_UserRequiredButNotAuthenticated
-     */
-    private function integerMeExpression($query, $field, $params, $alias, $currentUser)
-    {
-        if (!$currentUser) {
-            throw new \UnserAllerLib_Api_V4_Exception_UserRequiredButNotAuthenticated();
-        }
-        return $query->expr()->eq($field, $currentUser->getId());
     }
 
     /**
@@ -2334,23 +2472,6 @@ abstract class Vortex
     private function integerAnyExpression($query, $field, $params, $alias)
     {
         return $query->expr()->eq($field, $query->expr()->any($this->consumeSubquery($params)));
-    }
-
-    /**
-     * @param \Doctrine\ORM\QueryBuilder $query
-     * @param string $field
-     * @param array $params
-     * @param string $alias
-     * @param \UnserAller_Model_User $currentUser
-     * @return \Doctrine\ORM\Query\Expr\Comparison
-     * @throws \UnserAllerLib_Api_V4_Exception_UserRequiredButNotAuthenticated
-     */
-    private function integerNotmeExpression($query, $field, $params, $alias, $currentUser)
-    {
-        if (!$currentUser) {
-            throw new \UnserAllerLib_Api_V4_Exception_UserRequiredButNotAuthenticated();
-        }
-        return $query->expr()->neq($field, $currentUser->getId());
     }
 
     /**
@@ -2858,10 +2979,10 @@ abstract class Vortex
             $query->addSelect("($col) $alias");
         } else {
             $query->addSelect("(COALESCE(" . $this->joinTranslationOnce(
-                    $query,
-                    $translationName,
-                    $language
-                ) . ".translation,$col)) $alias");
+                $query,
+                $translationName,
+                $language
+            ) . ".translation,$col)) $alias");
         }
 
         return [
