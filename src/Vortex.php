@@ -1900,6 +1900,18 @@ abstract class Vortex
      * @param string $alias
      * @return mixed
      */
+    private function entityIsExpression($query, $field, $params, $alias)
+    {
+        return $query->expr()->in($field, $params);
+    }
+
+    /**
+     * @param \Doctrine\ORM\QueryBuilder $query
+     * @param string $field
+     * @param array $params
+     * @param string $alias
+     * @return mixed
+     */
     private function entityIsOrNullExpression($query, $field, $params, $alias)
     {
         return $query->expr()->orX(
