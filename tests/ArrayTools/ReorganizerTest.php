@@ -25,7 +25,7 @@ class ReorganizerTest extends TestCase
 
     private function assertPatchArrayIsProducingExpectedResult($array, $tasks, $expected)
     {
-        self::$reorganizer->patchArray($array, $tasks);
+        self::$reorganizer->run($array, $tasks);
         $this->assertEquals(serialize($expected), serialize($array));
     }
 

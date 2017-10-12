@@ -28,7 +28,7 @@ class Reorganizer
      * @param array[] $tasks
      * @return array (patched)
      */
-    public function patchArray(&$array, $tasks)
+    public function run(&$array, $tasks)
     {
         $temporaryValue = null;
 

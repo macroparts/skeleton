@@ -3,6 +3,7 @@
 namespace Macroparts\Vortex;
 
 use Doctrine\ORM\Query;
+use Macroparts\Vortex\Helper\UniqueNumberGenerator;
 
 abstract class Vortex
 {
@@ -71,6 +72,11 @@ abstract class Vortex
     protected $id = null;
 
     /**
+     * @var UniqueNumberGenerator
+     */
+    protected $uniqidGenerator;
+
+    /**
      * All parameters unsorted
      *
      * @var array
@@ -88,6 +94,7 @@ abstract class Vortex
     {
         $this->entityManager = $entityManager;
         $this->supportedLanguages = $supportedLanguages;
+        $this->uniqidGenerator = new UniqueNumberGenerator();
 
         //Cache customized whitelists merged with core whitelists
         $this->finalFilterWhitelist = $this->getStaticPropertyOfClassMergedWithParents(
@@ -2071,175 +2078,7 @@ abstract class Vortex
         return $gte;
     }
 
-    /**
-     * Translates params into where conditions. The subquery must really return an integer for it to work!
-     * Returning null will cause wrong bahvior!!! In DQL it seems to be impossible to do an IS NULL comparison
-     * on a subquery. And it seems to be impossible to not return null values either
-     * Todo: Needs research, for time being only true comparison is working as expected
-     *
-     *
-     * @param $subquery
-     * @param \Doctrine\ORM\QueryBuilder $query
-     * @param string $alias
-     * @param \UnserAller_Model_User $currentUser
-     * @param array $methods
-     * @return \Doctrine\ORM\Query\Expr\Andx
-     * @uses subqueryFalseExpression
-     * @uses subqueryTrueExpression
-     * @uses subqueryGtExpression
-     * @uses subqueryGteExpression
-     * @uses subqueryLtExpression
-     * @uses subqueryLteExpression
-     * @uses subqueryEqExpression
-     * @uses subqueryAnyExpression
-     * @uses subqueryNullExpression
-     */
-    protected function createConditionsForIntegerSubquery($subquery, $query, $alias, $currentUser, $methods)
-    {
-        if (\UnserAllerLib_Tool_Array::hasMoreKeysThan(
-            $methods,
-            ['false', 'true', 'gt', 'gte', 'lt', 'lte', 'eq', 'any', 'null']
-        )
-        ) {
-            throw new \InvalidArgumentException('Invalid expression methods used');
-        }
 
-        return $this->createExpression('subquery', $subquery, $query, $alias, $currentUser, $methods);
-    }
-
-    /**
-     * @param $subquery
-     * @param \Doctrine\ORM\QueryBuilder $query
-     * @param string $alias
-     * @param \UnserAller_Model_User $currentUser
-     * @param array $methods
-     * @return \Doctrine\ORM\Query\Expr\Andx
-     */
-    protected function createConditionsForIntegerCollectionSubquery($subquery, $query, $alias, $currentUser, $methods)
-    {
-        if (\UnserAllerLib_Tool_Array::hasMoreKeysThan($methods, ['anyis'])) {
-            throw new \InvalidArgumentException('Invalid expression methods used');
-        }
-
-        return $this->createExpression('subquery', $subquery, $query, $alias, $currentUser, $methods);
-    }
-
-    /**
-     * Translates params into where conditions. The subquery must really return an integer for it to work!
-     * Returning null will cause wrong bahvior!!! In DQL it seems to be impossible to do an IS NULL comparison
-     * on a subquery. And it seems to be impossible to not return null values either
-     * Todo: Needs research, for time being only true comparison is working as expected
-     *
-     *
-     * @param $subquery
-     * @param \Doctrine\ORM\QueryBuilder $query
-     * @param string $alias
-     * @param \UnserAller_Model_User $currentUser
-     * @param array $methods
-     * @return \Doctrine\ORM\Query\Expr\Andx
-     * @uses subqueryAnyisExpression
-     */
-    protected function createConditionsForStringCollectionSubquery($subquery, $query, $alias, $currentUser, $methods)
-    {
-        if (\UnserAllerLib_Tool_Array::hasMoreKeysThan($methods, ['anyis'])) {
-            throw new \InvalidArgumentException('Invalid expression methods used');
-        }
-
-        return $this->createExpression('subquery', $subquery, $query, $alias, $currentUser, $methods);
-    }
-
-    /**
-     * Translates params into where conditions. The subquery must really return an integer for it to work!
-     * Returning null will cause wrong bahvior!!! In DQL it seems to be impossible to do an IS NULL comparison
-     * on a subquery. And it seems to be impossible to not return null values either
-     * Todo: Needs research, for time being only true comparison is working as expected
-     *
-     *
-     * @param $subquery
-     * @param \Doctrine\ORM\QueryBuilder $query
-     * @param string $alias
-     * @param \UnserAller_Model_User $currentUser
-     * @param array $methods
-     * @return \Doctrine\ORM\Query\Expr\Andx
-     * @uses subqueryTrueExpression
-     * @uses subqueryFalseExpression
-     */
-    protected function createConditionsForDatetimeSubquery($subquery, $query, $alias, $currentUser, $methods)
-    {
-        if (\UnserAllerLib_Tool_Array::hasMoreKeysThan($methods, ['false', 'true'])) {
-            throw new \InvalidArgumentException('Invalid expression methods used');
-        }
-
-        return $this->createExpression('subquery', $subquery, $query, $alias, $currentUser, $methods);
-    }
-
-    /**
-     * Translates params into where conditions. Null values are handled as you would expect it.
-     *
-     * @param $col
-     * @param \Doctrine\ORM\QueryBuilder $query
-     * @param string $alias
-     * @param \UnserAller_Model_User $currentUser
-     * @param array $methods
-     * @return \Doctrine\ORM\Query\Expr\Andx
-     * @uses integerIsExpression
-     * @uses integerNotExpression
-     * @uses integerGtExpression
-     * @uses integerGteExpression
-     * @uses integerLtExpression
-     * @uses integerLteExpression
-     * @uses integerFalseExpression
-     * @uses integerTrueExpression
-     */
-    protected function createConditionsForIntegerColumn($col, $query, $alias, $currentUser, $methods)
-    {
-        if (\UnserAllerLib_Tool_Array::hasMoreKeysThan(
-            $methods,
-            ['is', 'not', 'gt', 'gte', 'lt', 'lte', 'false', 'true']
-        )
-        ) {
-            throw new \InvalidArgumentException('Invalid expression methods used');
-        }
-
-        return $this->createExpression('integer', $col, $query, $alias, $currentUser, $methods);
-    }
-
-    /**
-     * Todo: Whitelisting allowed subqueries for the any filter makes having this extra function unnecessary
-     *
-     * This one allows some filter directives that result to function calls on protected methods. Don't ever redirect
-     * user content here.
-     *
-     * Translates params into where conditions. Null values are handled as you would expect it.
-     *
-     * @param $col
-     * @param \Doctrine\ORM\QueryBuilder $query
-     * @param string $alias
-     * @param \UnserAller_Model_User $currentUser
-     * @param array $methods
-     * @return \Doctrine\ORM\Query\Expr\Andx
-     * @uses integerIsExpression
-     * @uses integerNotExpression
-     * @uses integerGtExpression
-     * @uses integerGteExpression
-     * @uses integerLtExpression
-     * @uses integerLteExpression
-     * @uses integerFalseExpression
-     * @uses integerTrueExpression
-     * @uses integerAnyExpression
-     */
-    protected function createConditionsForIntegerColumnInternal($col, $query, $alias, $currentUser, $methods)
-    {
-        if (\UnserAllerLib_Tool_Array::hasMoreKeysThan(
-            $methods,
-            ['is', 'not', 'gt', 'gte', 'lt', 'lte', 'false', 'true', 'any']
-        )
-        ) {
-            throw new \InvalidArgumentException('Invalid expression methods used');
-        }
-
-        return $this->createExpression('integer', $col, $query, $alias, $currentUser, $methods);
-    }
 
     /**
      * Knows how to create a callable from a subquery definition
@@ -2758,7 +2597,7 @@ abstract class Vortex
      */
     protected function getModelForMeta()
     {
-        return uniqid('UnknownClass');
+        return 'UnknownClass' . $this->uniqidGenerator->next();
     }
 
     /**
@@ -2807,83 +2646,6 @@ abstract class Vortex
         }
 
         return $gte;
-    }
-
-    /**
-     * Does some crazy things
-     *
-     * @param string $value
-     * @return array
-     */
-    private function filterJsonAfterwards($value)
-    {
-        return json_decode($value, true);
-    }
-
-    /**
-     * Does some crazy things
-     *
-     * @param string $value
-     * @return mixed
-     */
-    private function filterJsonIfNullSetEmptyObjectAfterwards($value)
-    {
-        return $value === null ? new \stdClass() : json_decode($value, true);
-    }
-
-    /**
-     * Does some crazy things
-     *
-     * @param string $value
-     * @return string
-     */
-    private function filterNl2BrAfterwards($value)
-    {
-        return nl2br($value, false);
-    }
-
-    /**
-     * Does some crazy things
-     *
-     * @param string $value
-     * @return array
-     */
-    private function filterJsonOrNullAfterwards($value)
-    {
-        return $value === null ? null : json_decode($value, true);
-    }
-
-    /**
-     * Too complex to explain
-     *
-     * @param string $value
-     * @return \DateTime
-     */
-    private function filterDatetimeAfterwards($value)
-    {
-        return new \DateTime($value);
-    }
-
-    /**
-     * Too complex to explain
-     *
-     * @param string $value
-     * @return \DateTime
-     */
-    private function filterDatetimeOrNullAfterwards($value)
-    {
-        return $value === null ? null : new \DateTime($value);
-    }
-
-    /**
-     * Too complex to explain
-     *
-     * @param string|null $value
-     * @return int|null
-     */
-    private function filterIntOrNullAfterwards($value)
-    {
-        return $value === null ? null : (int)$value;
     }
 
     /**
@@ -2939,78 +2701,5 @@ abstract class Vortex
         $this->unsortedParams = $unsortedParams;
 
         return $this;
-    }
-
-    /**
-     * @param \Doctrine\ORM\QueryBuilder $query
-     * @param string $translationName
-     * @param string $language
-     * @return string alias of joined translation table
-     */
-    protected function joinTranslationOnce($query, $translationName, $language)
-    {
-        $alias = 'translation' . $translationName . $language;
-
-        if ($this->wasAliasUsed($query, $alias)) {
-            return $alias;
-        }
-
-        $rootAlias = $this->getRootAlias($query);
-
-        $query->setParameter("name$alias", $translationName);
-        $query->setParameter("target$alias", $language);
-
-        $query->leftJoin(
-            'UnserAller_Model_Translation',
-            $alias,
-            'WITH',
-            "$alias.name = CONCAT(:name$alias,$rootAlias.id) AND $alias.target = :target$alias"
-        );
-
-        return $alias;
-    }
-
-    /**
-     * @param \Doctrine\ORM\QueryBuilder $query
-     * @param string $alias
-     * @param string $col
-     * @param string $name
-     * @param string $translationName
-     * @param string $language
-     * @return array
-     */
-    protected function abstractIncludeMultilanguageStringColumn(
-        $query,
-        $alias,
-        $col,
-        $name,
-        $translationName,
-        $language
-    ) {
-        if (!$language) {
-            $query->addSelect("($col) $alias");
-        } else {
-            $query->addSelect("(COALESCE(" . $this->joinTranslationOnce(
-                $query,
-                $translationName,
-                $language
-            ) . ".translation,$col)) $alias");
-        }
-
-        return [
-            $alias,
-            'move' => $name
-        ];
-    }
-
-    protected function getAdditionalUserParamOrFail(&$additionalParams)
-    {
-        if (!isset($additionalParams['user'][0])) {
-            throw new \InvalidArgumentException('User identifier required but not given');
-        }
-
-        $param = $additionalParams['user'];
-        unset($additionalParams['user']);
-        return \UnserAllerLib_Validate_Helper::integerOrFail($param[0], 1);
     }
 }
