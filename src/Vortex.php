@@ -986,10 +986,11 @@ abstract class Vortex
         }
 
         $meta['numberOfItemsFound'] = $this->selectTotalNumberOfRows($incompleteStatement);
-        $meta['numberOfPages'] = $this->calculateTotalPages($meta['numberOfItemsTotal'], $limit);
-        $meta['filter'] = $filterString;
-        $meta['include'] = $includeString;
-        $meta['page'] = $includeString;
+        $meta['numberOfPages'] = $this->calculateTotalPages($meta['numberOfItemsFound'], $limit);
+        $meta['appliedFilters'] = (string) $filterString;
+        $meta['appliedIncludes'] = (string) $includeString;
+        $meta['appliedOrders'] = (string) $orderString;
+        $meta['currentPage'] = $page;
         $meta['pagesize'] = $limit;
 
         return [
