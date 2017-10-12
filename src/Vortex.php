@@ -499,17 +499,16 @@ abstract class Vortex
      * Calculates total pages for an $incompleteStatement. Incomplete statements are doctrine query builder instances
      * with all required conditions but no select statement and no additional includes.
      *
-     * @param \Doctrine\ORM\QueryBuilder $incompleteStatement
+     * @param int $numberOfRows
      * @param int $limit
      * @return float|int
      */
-    private function calculateTotalPages($incompleteStatement, $limit)
+    private function calculateTotalPages($numberOfRows, $limit)
     {
-        $incompleteStatement = clone $incompleteStatement;
-
         if ($limit) {
-            return (int)ceil($this->executeRowCountStatement($incompleteStatement) / $limit);
+            return (int) ceil($numberOfRows / $limit);
         }
+
         return 1;
     }
 
@@ -517,7 +516,7 @@ abstract class Vortex
      * @param \Doctrine\ORM\QueryBuilder $incompleteStatement
      * @return int
      */
-    private function executeRowCountStatement($incompleteStatement)
+    private function selectTotalNumberOfRows($incompleteStatement)
     {
         $rootAlias = $this->getRootAlias($incompleteStatement);
         $primaryIndexCol = $rootAlias . '.' . $this->getPrimaryIndexCol();
@@ -930,7 +929,7 @@ abstract class Vortex
      */
     public function findTotalNumberOfRows($currentUser, $filterString = '', $language = '', $joinFiltersWith = 'AND')
     {
-        return $this->executeRowCountStatement(
+        return $this->selectTotalNumberOfRows(
             $this->createIncompleteStatement($currentUser, $filterString, $language, $joinFiltersWith)
         );
     }
@@ -986,8 +985,15 @@ abstract class Vortex
                 ->setMaxResults($limit);
         }
 
+        $meta['numberOfItemsFound'] = $this->selectTotalNumberOfRows($incompleteStatement);
+        $meta['numberOfPages'] = $this->calculateTotalPages($meta['numberOfItemsTotal'], $limit);
+        $meta['filter'] = $filterString;
+        $meta['include'] = $includeString;
+        $meta['page'] = $includeString;
+        $meta['pagesize'] = $limit;
+
         return [
-            'totalPages' => $this->calculateTotalPages($incompleteStatement, $limit),
+            'totalPages' => $meta['numberOfPages'],
             'filter' => $filterString,
             'include' => $includeString,
             'page' => $page,
