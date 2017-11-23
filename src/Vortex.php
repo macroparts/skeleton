@@ -2173,7 +2173,7 @@ abstract class Vortex
      */
     protected function createConditionsForDatetimeSubquery($subquery, $query, $alias, $currentUser, $methods)
     {
-        if (\UnserAllerLib_Tool_Array::hasMoreKeysThan($methods, ['false', 'true'])) {
+        if (\UnserAllerLib_Tool_Array::hasMoreKeysThan($methods, ['false', 'true', 'gte', 'lte', 'gt', 'lt'])) {
             throw new \InvalidArgumentException('Invalid expression methods used');
         }
 
@@ -2366,9 +2366,18 @@ abstract class Vortex
      */
     private function subqueryGtExpression($query, $subquery, $params, $alias)
     {
+        $expression = $query->expr()->orX();
+        foreach ($params as $param) {
+            $alias = uniqid();
+            $query->setParameter("param$alias", $param);
+            $expression->add(
+                $query->expr()->gt('(' . $this->consumeSubquery($subquery) . ')', ":param$alias")
+            );
+        }
+
         return $query->expr()->andX(
             $query->expr()->exists($this->consumeSubquery($subquery)),
-            $query->expr()->gt('(' . $this->consumeSubquery($subquery) . ')', $params[0])
+            $expression
         );
     }
 
@@ -2376,14 +2385,22 @@ abstract class Vortex
      * @param \Doctrine\ORM\QueryBuilder $query
      * @param array $subquery
      * @param array $params
-     * @param string $alias
-     * @return mixed
+     * @return Query\Expr\Andx
      */
-    private function subqueryGteExpression($query, $subquery, $params, $alias)
+    private function subqueryGteExpression($query, $subquery, $params)
     {
+        $expression = $query->expr()->orX();
+        foreach ($params as $param) {
+            $alias = uniqid();
+            $query->setParameter("param$alias", $param);
+            $expression->add(
+                $query->expr()->gte('(' . $this->consumeSubquery($subquery) . ')', ":param$alias")
+            );
+        }
+
         return $query->expr()->andX(
             $query->expr()->exists($this->consumeSubquery($subquery)),
-            $query->expr()->gte('(' . $this->consumeSubquery($subquery) . ')', $params[0])
+            $expression
         );
     }
 
@@ -2396,9 +2413,18 @@ abstract class Vortex
      */
     private function subqueryLteExpression($query, $subquery, $params, $alias)
     {
+        $expression = $query->expr()->orX();
+        foreach ($params as $param) {
+            $alias = uniqid();
+            $query->setParameter("param$alias", $param);
+            $expression->add(
+                $query->expr()->lte('(' . $this->consumeSubquery($subquery) . ')', ":param$alias")
+            );
+        }
+
         return $query->expr()->andX(
             $query->expr()->exists($this->consumeSubquery($subquery)),
-            $query->expr()->lte('(' . $this->consumeSubquery($subquery) . ')', $params[0])
+            $expression
         );
     }
 
@@ -2411,9 +2437,18 @@ abstract class Vortex
      */
     private function subqueryLtExpression($query, $subquery, $params, $alias)
     {
+        $expression = $query->expr()->orX();
+        foreach ($params as $param) {
+            $alias = uniqid();
+            $query->setParameter("param$alias", $param);
+            $expression->add(
+                $query->expr()->lt('(' . $this->consumeSubquery($subquery) . ')', ":param$alias")
+            );
+        }
+
         return $query->expr()->andX(
             $query->expr()->exists($this->consumeSubquery($subquery)),
-            $query->expr()->lt('(' . $this->consumeSubquery($subquery) . ')', $params[0])
+            $expression
         );
     }
 
