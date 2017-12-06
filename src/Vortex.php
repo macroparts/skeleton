@@ -1581,7 +1581,6 @@ abstract class Vortex
     {
         $result = $this->retrieveNestedSingleResult($value, $nestingOptions, $language);
         $this->mergeNestedMeta($meta, $result['meta'], $finalPath);
-        unset($result['meta']);
         return $result;
     }
 
@@ -1682,6 +1681,10 @@ abstract class Vortex
                     $scheduledDeletions[$path] = ['delete' => 1];
                 }
             }
+
+            if (isset($fix['addMeta'])) {
+                $item[$fix['addMeta']['alias']]['meta'] = $this->createMetadataForResultItem($item[$fix['addMeta']['alias']], $language, $itemLanguageGetter, $fix['addMeta']['model']);
+            }
         }
 
         foreach ($scheduledDeletions as $path => $fix) {
@@ -1699,11 +1702,11 @@ abstract class Vortex
      * @param callable $itemLanguageGetter
      * @return array
      */
-    private function createMetadataForResultItem($resultItem, $requestedLanguage, $itemLanguageGetter)
+    private function createMetadataForResultItem($resultItem, $requestedLanguage, $itemLanguageGetter, $model = null)
     {
         return [
             'language' => $this->$itemLanguageGetter($resultItem, $requestedLanguage),
-            'model' => $this->getModelForMeta()
+            'model' => $model ? $model : $this->getModelForMeta(),
         ];
     }
 
