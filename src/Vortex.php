@@ -356,7 +356,7 @@ abstract class Vortex
                     sprintf(
                         'The request filter "%s" does not exist on the current adapter "%s".',
                         $requestedFilter,
-                        $this->getModelForMeta()
+                        get_class($this)
                     )
                 );
             }
