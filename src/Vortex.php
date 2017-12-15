@@ -352,7 +352,13 @@ abstract class Vortex
         $expression = mb_strtoupper($joinFiltersWith) === 'OR' ? $query->expr()->orX() : $query->expr()->andX();
         foreach ($requestedFilters as $requestedFilter => $additionalParams) {
             if ($this->isNotFilterableProperty($requestedFilter)) {
-                throw new \UnserAllerLib_Api_V4_Exception_InvalidFilter($requestedFilter);
+                throw new \UnserAllerLib_Api_V4_Exception_InvalidFilter(
+                    sprintf(
+                        'The request filter "%s" does not exist on the current adapter "%s".',
+                        $requestedFilter,
+                        $this->getModelForMeta()
+                    )
+                );
             }
 
             $filterMethod = $this->decodeMethodFromRequestedFilter($requestedFilter);
