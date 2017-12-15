@@ -1106,6 +1106,7 @@ abstract class Vortex
         }
     }
 
+
     /**
      * @param \UnserAller_Model_User $currentUser
      * @param string $language
@@ -1127,12 +1128,41 @@ abstract class Vortex
         $page = 1,
         $filterMode = 'AND'
     ) {
+        return $this->getNativeSqlIngredients(
+            $this->getQueryBuilderFromFindMultiple(
+                $currentUser, $language, $filterString, $includeString, $orderString, $limit, $page, $filterMode
+            )->getQuery()
+        );
+    }
+
+    /**
+     * Returns a query builder from the findMultipleForApi method.
+     *
+     * @param $currentUser
+     * @param string $language
+     * @param string $filterString
+     * @param string $includeString
+     * @param string $orderString
+     * @param int $limit
+     * @param int $page
+     * @param string $filterMode
+     * @return QueryBuilder
+     */
+    public function getQueryBuilderFromFindMultiple(
+        $currentUser,
+        $language = '',
+        $filterString = '',
+        $includeString = '',
+        $orderString = '',
+        $limit = 0,
+        $page = 1,
+        $filterMode = 'AND'
+    ) {
         if ($page <= 0) {
             $page = 1;
         }
 
         $incompleteStatement = $this->createIncompleteStatement($currentUser, $filterString, $language, $filterMode);
-
         $completeStatement = $this->completeStatement(
             $currentUser,
             $language,
@@ -1146,7 +1176,7 @@ abstract class Vortex
                 ->setMaxResults($limit);
         }
 
-        return $this->getNativeSqlIngredients($completeStatement->getQuery());
+        return $completeStatement;
     }
 
     /**
