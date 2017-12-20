@@ -90,10 +90,10 @@ abstract class Vortex
         $this->supportedLanguages = $supportedLanguages;
 
         //Cache customized whitelists merged with core whitelists
-        $this->finalFilterWhitelist = $this->getStaticPropertyOfClassMergedWithParents(
+        $this->finalFilterWhitelist = array_merge($this->getStaticPropertyOfClassMergedWithParents(
             static::class,
             'filterWhitelist'
-        );
+        ), $this->abstractFilterWhitelist);
         $this->finalOrderWhitelist = $this->getStaticPropertyOfClassMergedWithParents(static::class, 'orderWhitelist');
         $this->finalIncludeWhitelist = $this->getStaticPropertyOfClassMergedWithParents(
             static::class,
@@ -672,7 +672,7 @@ abstract class Vortex
         $modifierParamStr = '';
 
         $depth = 0;
-        for ($i = 0; $i <= strlen($s); $i++) {
+        for ($i = 0; $i < strlen($s); $i++) {
             switch ($s[$i]) {
                 case '(':
                     if ($depth) {
@@ -729,7 +729,7 @@ abstract class Vortex
         $tmpStr = '';
 
         $depth = 0;
-        for ($i = 0; $i <= strlen($s); $i++) {
+        for ($i = 0; $i < strlen($s); $i++) {
             switch ($s[$i]) {
                 case '(':
                     $tmpStr .= $s[$i];
@@ -1625,7 +1625,7 @@ abstract class Vortex
         foreach ($nestedMeta['modelnameIndex'] as $model => $paths) {
             foreach ($paths as $path) {
                 $fullPath = $includeName . '.' . $path;
-                if ($path && !in_array($fullPath, $meta['modelnameIndex'][$model])) {
+                if ($path && (!isset($meta['modelnameIndex'][$model]) || !in_array($fullPath, $meta['modelnameIndex'][$model]))) {
                     $meta['modelnameIndex'][$model][] = $fullPath;
                 }
             }
